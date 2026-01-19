@@ -91,12 +91,12 @@ export const TimelineCanvas: React.FC<TimelineCanvasProps> = ({
               <span className="md:hidden">※期間は変更される場合があります。</span>
             </p>
             
-            {/* ★修正箇所: スマホでも表示されるようにし、文言を強化 */}
+            {/* ★修正箇所: 「素材」を「画像」に変更 */}
             <div className="mt-2 pt-2 border-t border-zinc-800/50">
               <p className="text-[9px] text-zinc-600 leading-relaxed font-sans">
-                This is an unofficial fan site using official assets. <br/>
+                This is an unofficial fan site using official images. <br/>
                 All images and contents are ©GRYPHLINE. <br/>
-                当サイトは公式素材を使用した非公式ファンサイトであり、運営企業とは一切関係ありません。
+                当サイトは公式画像を使用した非公式ファンサイトであり、運営企業とは一切関係ありません。
               </p>
             </div>
           </div>
