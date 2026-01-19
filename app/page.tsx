@@ -418,7 +418,7 @@ export default function Home() {
             <div className="flex items-center gap-2 bg-black/40 px-3 py-1 rounded border border-white/5">
               <MoveHorizontal size={14} className="text-zinc-500" /><input type="range" min="800" max="5000" value={canvasWidth} onChange={(e) => setCanvasWidth(Number(e.target.value))} className="w-32 accent-amber-400 cursor-pointer h-1" /><ZoomIn size={14} className="text-zinc-500" />
             </div>
-            {/* ▼▼▼ EXPORTボタン (許可証がある時のみ表示) ▼▼▼ */}
+            {/* EXPORTボタン (許可証がある時のみ表示) */}
             {enableAdminFeatures && (
                <button onClick={handleExport} className="flex items-center gap-2 px-4 py-2 border border-amber-400 text-amber-400 font-bold text-xs uppercase hover:bg-amber-400 hover:text-black transition-colors rounded-sm"><Download size={14} /> EXPORT</button>
             )}
@@ -449,12 +449,20 @@ export default function Home() {
                   <h2 className="text-4xl font-black text-white tracking-tighter uppercase italic">Event Schedule</h2>
                   <div className="flex items-center gap-2 mt-1"><span className="bg-amber-400 text-black text-[10px] font-bold px-1">OFFICIAL_DATA</span><p className="text-xs text-amber-400 font-mono tracking-widest">ARKNIGHTS: ENDFIELD</p></div>
                   
-                  {/* ▼▼▼ 注意事項を追加 ▼▼▼ */}
+                  {/* 注意事項 */}
                   <p className="text-[10px] text-zinc-500 mt-2 font-mono flex items-center gap-1">
                     <Info size={10} />
                     ※開催期間は予告なく変更される場合があります。終了時期が未定のイベントは仮の日付で表示されています。
                   </p>
-                  {/* ▲▲▲ 追加ここまで ▲▲▲ */}
+                  
+                  {/* 権利表記 (©GRYPHLINE) */}
+                  <div className="mt-3 pt-2 border-t border-zinc-800/50">
+                    <p className="text-[9px] text-zinc-600 leading-relaxed font-sans">
+                      This is an unofficial fan site. <br/>
+                      All images and contents are ©GRYPHLINE. <br/>
+                      当サイトは非公式のファンサイトであり、公式運営企業とは一切関係ありません。
+                    </p>
+                  </div>
 
                 </div>
                 <div className="text-right"><div className="text-5xl font-bold text-zinc-800 font-mono select-none">{year}</div></div>
