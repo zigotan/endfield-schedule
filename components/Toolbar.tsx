@@ -38,7 +38,10 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   isAdmin,
   setShowLoginModal,
 }) => {
-  const CHANNEL_URL = "https://www.youtube.com/channel/UCTv10NGVzs91keuRNy4z9Fg"; 
+  // ★修正: 末尾に ?sub_confirmation=1 を追加
+  const CHANNEL_URL = "https://www.youtube.com/channel/UCTv10NGVzs91keuRNy4z9Fg?sub_confirmation=1"; 
+  
+  // publicフォルダのアイコンファイル名
   const CHANNEL_ICON_URL = "/icon.png"; 
 
   return (
@@ -46,6 +49,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
       
       {/* 上段 */}
       <div className="flex items-center justify-between w-full md:w-auto gap-2">
+        {/* アイコンリンク */}
         <a href={CHANNEL_URL} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center w-8 h-8 rounded-full overflow-hidden border border-zinc-700 hover:border-amber-400 transition-colors shadow-lg group relative bg-black" title="じごちゃんねる【エンドフィールド支部】">
            <img src={CHANNEL_ICON_URL} alt="Channel Icon" className="w-full h-full object-cover" />
         </a>
