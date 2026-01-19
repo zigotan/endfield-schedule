@@ -256,10 +256,6 @@ export default function Home() {
     }
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // page.tsxのこの関数は使われなくなります
-  };
-
   // クリック時の挙動分岐
   const handleEventClick = (event: GameEvent) => {
     if (isAdmin) {
@@ -333,8 +329,8 @@ export default function Home() {
             inputType={inputType}
             setInputType={setInputType}
             inputImage={inputImage}
-            setInputImage={setInputImage} // ★修正: 関数を渡す
-            handleImageUpload={handleImageUpload}
+            setInputImage={setInputImage} 
+            // ★ handleImageUpload={handleImageUpload} を削除しました
             handleSaveEntry={handleSaveEntry}
             isSyncing={isSyncing}
             handleJsonExport={handleJsonExport}
