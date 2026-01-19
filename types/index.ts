@@ -1,4 +1,4 @@
-// types/index.ts
+// src/types/index.ts
 
 export type EventType = 'main' | 'story' | 'event' | 'high_difficulty' | 'gacha' | 'campaign';
 
@@ -8,7 +8,8 @@ export interface GameEvent {
   startDate: string;
   endDate: string;
   type: EventType;
-  bannerImage?: string; 
+  bannerImage?: string;
+  description?: string; // ★追加: 詳細説明
 }
 
 export interface WeekMarker {
@@ -16,5 +17,4 @@ export interface WeekMarker {
   label: string;
 }
 
-// これがあることで、確実に「モジュール」として認識させます
 export {};

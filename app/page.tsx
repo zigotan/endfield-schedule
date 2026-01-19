@@ -5,11 +5,12 @@ import { differenceInDays, format, nextMonday, isMonday, addDays, addMonths, end
 import { toPng } from 'html-to-image';
 import { createClient } from '@supabase/supabase-js';
 
-// 作成したコンポーネントを3つとも読み込み
+// コンポーネント読み込み
 import { GameEvent, EventType, WeekMarker } from '../types';
 import { AdminPanel } from '../components/AdminPanel';
 import { Toolbar } from '../components/Toolbar';
 import { TimelineCanvas } from '../components/TimelineCanvas';
+import { EventModal } from '../components/EventModal'; // ★追加
 
 // --- Supabase Client ---
 const supabase = createClient(
@@ -37,6 +38,9 @@ export default function Home() {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
 
+  // モーダル用State ★追加
+  const [selectedEvent, setSelectedEvent] = useState<GameEvent | null>(null);
+
   // 期間計算
   const currentPeriodStart = new Date(year, viewStartMonth, 1);
   const currentPeriodEnd = endOfMonth(addMonths(currentPeriodStart, 3)); 
@@ -45,7 +49,7 @@ export default function Home() {
   const dragItem = useRef<number | null>(null);
   const dragOverItem = useRef<number | null>(null);
 
-  // ピンチ操作用の状態管理（★追加）
+  // ピンチ操作用の状態管理
   const [initialPinchDist, setInitialPinchDist] = useState<number | null>(null);
   const [initialWidth, setInitialWidth] = useState<number>(0);
 
@@ -64,20 +68,32 @@ export default function Home() {
           setLastUpdated(format(new Date(data.updated_at), 'yyyy/MM/dd HH:mm'));
         }
       } else {
-        setEvents([{ id: '1', title: 'Welcome to Endfield Schedule', startDate: '2026-01-22', endDate: '2026-02-10', type: 'main' }]);
+        setEvents([{ id: '1', title: 'Welcome to Endfield Schedule', startDate: '2026-01-22', endDate: '2026-02-10', type: 'main', description: 'Sample Event Description' }]);
       }
       setIsLoaded(true);
     };
     fetchCloudData();
   }, []);
 
-  // --- 期間変更ごとの再計算 ---
+  // --- 期間変更ごとの再計算 & ★自動スクロール ---
   useEffect(() => {
     const now = new Date();
     if (isWithinInterval(now, { start: currentPeriodStart, end: currentPeriodEnd })) {
       const diff = differenceInDays(now, currentPeriodStart);
       const percent = (diff / totalDaysInView) * 100;
       setTodayPercent(percent);
+
+      // ★候補1: 自動スクロール機能 (読み込み完了後、少し待ってから実行)
+      if (isLoaded) {
+        setTimeout(() => {
+          const container = document.getElementById('main-scroll-container');
+          if (container) {
+            // 今日の位置(px) - 画面の半分 = 画面中央に今日が来る
+            const scrollPos = (canvasWidth * (percent / 100)) - (container.clientWidth / 2);
+            container.scrollTo({ left: Math.max(0, scrollPos), behavior: 'smooth' });
+          }
+        }, 500);
+      }
     } else {
       setTodayPercent(null);
     }
@@ -95,7 +111,7 @@ export default function Home() {
       currentDate = addDays(currentDate, 7);
     }
     setWeeks(weekMarkers);
-  }, [year, viewStartMonth, totalDaysInView]);
+  }, [year, viewStartMonth, totalDaysInView, isLoaded]); // isLoadedを依存配列に追加
 
   // --- クラウド同期 ---
   const syncToCloud = async (newEvents: GameEvent[]) => {
@@ -134,6 +150,7 @@ export default function Home() {
   const [inputTitle, setInputTitle] = useState('');
   const [inputStart, setInputStart] = useState('2026-01-22');
   const [inputEnd, setInputEnd] = useState('2026-02-10');
+  const [inputDesc, setInputDesc] = useState(''); // ★追加
   const [inputType, setInputType] = useState<EventType>('event');
   const [inputImage, setInputImage] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -148,15 +165,32 @@ export default function Home() {
       endDate: inputEnd,
       type: inputType,
       bannerImage: inputImage || undefined,
+      description: inputDesc, // ★追加
     };
     const newEvents = isEditing && editingId 
       ? events.map(e => e.id === editingId ? newEvent : e)
       : [...events, newEvent];
     handleEditSave(newEvents);
+    
+    // リセット
     setIsEditing(false);
     setEditingId(null);
     setInputTitle('');
+    setInputDesc(''); // ★追加
     setInputImage(null);
+  };
+
+  const handleDeleteEvent = () => {
+     if(!editingId) return;
+     if(confirm("Delete this event?")) {
+        const newEvents = events.filter(e => e.id !== editingId);
+        handleEditSave(newEvents);
+        setIsEditing(false);
+        setEditingId(null);
+        setInputTitle('');
+        setInputDesc('');
+        setInputImage(null);
+     }
   };
 
   // ドラッグ操作
@@ -175,10 +209,9 @@ export default function Home() {
     dragOverItem.current = null;
   };
 
-  // --- ★追加: スマホ用ピンチズーム処理 ---
+  // スマホ用ピンチズーム処理
   const handleTouchStart = (e: React.TouchEvent) => {
     if (e.touches.length === 2) {
-      // 2本指の距離を計算
       const dist = Math.hypot(
         e.touches[0].clientX - e.touches[1].clientX,
         e.touches[0].clientY - e.touches[1].clientY
@@ -194,9 +227,8 @@ export default function Home() {
         e.touches[0].clientX - e.touches[1].clientX,
         e.touches[0].clientY - e.touches[1].clientY
       );
-      // 拡大率を計算して幅を更新
       const scale = dist / initialPinchDist;
-      const newWidth = Math.min(Math.max(initialWidth * scale, 800), 5000); // 最小800px, 最大5000pxに制限
+      const newWidth = Math.min(Math.max(initialWidth * scale, 800), 5000);
       setCanvasWidth(newWidth);
     }
   };
@@ -204,7 +236,6 @@ export default function Home() {
   const handleTouchEnd = () => {
     setInitialPinchDist(null);
   };
-  // ----------------------------------------
 
   // 月移動
   const handlePrevMonth = () => setViewStartMonth(prev => prev - 1);
@@ -233,15 +264,22 @@ export default function Home() {
     }
   };
 
-  const handleEdit = (event: GameEvent) => {
-    if (!isAdmin) return;
-    setIsEditing(true);
-    setEditingId(event.id);
-    setInputTitle(event.title);
-    setInputStart(event.startDate);
-    setInputEnd(event.endDate);
-    setInputType(event.type);
-    setInputImage(event.bannerImage || null);
+  // イベントクリックハンドラ (編集フォームへのセット & モーダル表示)
+  const handleEventClick = (event: GameEvent) => {
+    // 誰でもモーダルは見れる
+    setSelectedEvent(event);
+
+    // 管理者ならフォームにも値を入れる
+    if (isAdmin) {
+      setIsEditing(true);
+      setEditingId(event.id);
+      setInputTitle(event.title);
+      setInputStart(event.startDate);
+      setInputEnd(event.endDate);
+      setInputDesc(event.description || ''); // ★追加
+      setInputType(event.type);
+      setInputImage(event.bannerImage || null);
+    }
   };
 
   const handleJsonExport = () => {
@@ -293,6 +331,8 @@ export default function Home() {
             inputStart={inputStart}
             setInputStart={setInputStart}
             inputEnd={inputEnd}
+            inputDesc={inputDesc} // ★追加
+            setInputDesc={setInputDesc} // ★追加
             setInputEnd={setInputEnd}
             inputType={inputType}
             setInputType={setInputType}
@@ -302,6 +342,7 @@ export default function Home() {
             isSyncing={isSyncing}
             handleJsonExport={handleJsonExport}
             handleJsonImport={handleJsonImport}
+            handleDeleteEvent={handleDeleteEvent} // ★追加
         />
       )}
 
@@ -309,7 +350,6 @@ export default function Home() {
       <main className="flex-1 flex flex-col min-w-0 h-full relative bg-[#09090b] overflow-hidden">
         <div className="absolute inset-0 pointer-events-none opacity-20" style={{ backgroundImage: 'linear-gradient(#27272a 1px, transparent 1px), linear-gradient(90deg, #27272a 1px, transparent 1px)', backgroundSize: '40px 40px' }}></div>
 
-        {/* 2-1. ツールバー */}
         <Toolbar
           currentPeriodStart={currentPeriodStart}
           currentPeriodEnd={currentPeriodEnd}
@@ -326,7 +366,6 @@ export default function Home() {
           setShowLoginModal={setShowLoginModal}
         />
 
-        {/* 2-2. ログインモーダル */}
         {showLoginModal && (
           <div className="absolute inset-0 z-[100] bg-black/90 flex items-center justify-center p-4">
              <div className="w-80 bg-[#18181b] border border-amber-400/50 p-6 rounded shadow-2xl text-center">
@@ -340,13 +379,12 @@ export default function Home() {
           </div>
         )}
 
-        {/* 2-3. スクロールエリア (タイムライン本体) */}
         <div 
           id="main-scroll-container" 
           className="flex-1 overflow-auto flex items-start relative z-0"
-          onTouchStart={handleTouchStart} // ★追加: タッチ開始
-          onTouchMove={handleTouchMove}   // ★追加: タッチ移動（ピンチ中）
-          onTouchEnd={handleTouchEnd}     // ★追加: タッチ終了
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
         >
           <TimelineCanvas 
             year={year}
@@ -362,9 +400,18 @@ export default function Home() {
             handleDragStart={handleDragStart}
             handleDragEnter={handleDragEnter}
             handleDragEnd={handleDragEnd}
-            handleEdit={handleEdit}
+            handleEdit={handleEventClick} // ★変更: クリック時にモーダルを開く関数を渡す
           />
         </div>
+        
+        {/* ★イベント詳細モーダル */}
+        {selectedEvent && (
+          <EventModal 
+            event={selectedEvent} 
+            onClose={() => setSelectedEvent(null)} 
+          />
+        )}
+
       </main>
     </div>
   );
