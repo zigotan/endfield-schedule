@@ -80,7 +80,6 @@ export const TimelineCanvas: React.FC<TimelineCanvasProps> = ({
       <div className="sticky top-0 z-50 bg-[#09090b] border-b border-zinc-800 shadow-xl">
         <div className="p-4 md:p-6 pb-2 flex flex-col md:flex-row justify-between items-start md:items-end relative z-20 bg-[#09090b] gap-2 md:gap-0">
           <div className="sticky left-0 z-30 bg-[#09090b]/95 backdrop-blur-sm pr-4 w-full md:w-auto">
-            {/* タイトル文字サイズをスマホでは小さく(text-2xl)、PCでは大きく(md:text-4xl) */}
             <h2 className="text-2xl md:text-4xl font-black text-white tracking-tighter uppercase italic">Event Schedule</h2>
             <div className="flex items-center gap-2 mt-1">
               <span className="bg-amber-400 text-black text-[8px] md:text-[10px] font-bold px-1">OFFICIAL_DATA</span>
@@ -91,15 +90,17 @@ export const TimelineCanvas: React.FC<TimelineCanvasProps> = ({
               <span className="hidden md:inline">※開催期間は予告なく変更される場合があります。終了時期が未定のイベントは仮の日付で表示されています。</span>
               <span className="md:hidden">※期間は変更される場合があります。</span>
             </p>
-            <div className="mt-2 md:mt-3 pt-2 border-t border-zinc-800/50 hidden md:block">
+            
+            {/* ★修正箇所: スマホでも表示されるようにし、文言を強化 */}
+            <div className="mt-2 pt-2 border-t border-zinc-800/50">
               <p className="text-[9px] text-zinc-600 leading-relaxed font-sans">
-                This is an unofficial fan site. <br/>
+                This is an unofficial fan site using official assets. <br/>
                 All images and contents are ©GRYPHLINE. <br/>
-                当サイトは非公式のファンサイトであり、公式運営企業とは一切関係ありません。
+                当サイトは公式素材を使用した非公式ファンサイトであり、運営企業とは一切関係ありません。
               </p>
             </div>
           </div>
-          {/* 年表示もサイズ調整 */}
+          
           <div className="absolute top-4 right-4 md:static md:text-right">
              <div className="text-3xl md:text-5xl font-bold text-zinc-800 font-mono select-none">{year}</div>
           </div>

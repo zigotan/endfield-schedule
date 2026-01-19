@@ -9,7 +9,7 @@ import { createClient } from '@supabase/supabase-js';
 import { GameEvent, EventType, WeekMarker } from '../types';
 import { AdminPanel } from '../components/AdminPanel';
 import { Toolbar } from '../components/Toolbar';
-import { TimelineCanvas } from '../components/TimelineCanvas'; // ★追加
+import { TimelineCanvas } from '../components/TimelineCanvas';
 
 // --- Supabase Client ---
 const supabase = createClient(
@@ -44,6 +44,10 @@ export default function Home() {
 
   const dragItem = useRef<number | null>(null);
   const dragOverItem = useRef<number | null>(null);
+
+  // ピンチ操作用の状態管理（★追加）
+  const [initialPinchDist, setInitialPinchDist] = useState<number | null>(null);
+  const [initialWidth, setInitialWidth] = useState<number>(0);
 
   // --- 初期化 & データ取得 ---
   useEffect(() => {
@@ -170,6 +174,37 @@ export default function Home() {
     dragItem.current = null;
     dragOverItem.current = null;
   };
+
+  // --- ★追加: スマホ用ピンチズーム処理 ---
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 2) {
+      // 2本指の距離を計算
+      const dist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      setInitialPinchDist(dist);
+      setInitialWidth(canvasWidth);
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (e.touches.length === 2 && initialPinchDist !== null) {
+      const dist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      // 拡大率を計算して幅を更新
+      const scale = dist / initialPinchDist;
+      const newWidth = Math.min(Math.max(initialWidth * scale, 800), 5000); // 最小800px, 最大5000pxに制限
+      setCanvasWidth(newWidth);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    setInitialPinchDist(null);
+  };
+  // ----------------------------------------
 
   // 月移動
   const handlePrevMonth = () => setViewStartMonth(prev => prev - 1);
@@ -306,7 +341,13 @@ export default function Home() {
         )}
 
         {/* 2-3. スクロールエリア (タイムライン本体) */}
-        <div id="main-scroll-container" className="flex-1 overflow-auto flex items-start relative z-0">
+        <div 
+          id="main-scroll-container" 
+          className="flex-1 overflow-auto flex items-start relative z-0"
+          onTouchStart={handleTouchStart} // ★追加: タッチ開始
+          onTouchMove={handleTouchMove}   // ★追加: タッチ移動（ピンチ中）
+          onTouchEnd={handleTouchEnd}     // ★追加: タッチ終了
+        >
           <TimelineCanvas 
             year={year}
             weeks={weeks}
