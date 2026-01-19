@@ -1,26 +1,49 @@
 @import "tailwindcss";
 
+@theme {
+  /* エンドフィールド風カラーの設定 */
+  --color-ef-yellow: #FBBF24;
+  --color-ef-dark: #09090b;
+  --color-ef-panel: #18181b;
+  --color-ef-grid: #27272a;
+  --color-ef-text: #e4e4e7;
+  --color-ef-muted: #71717a;
+}
+
+/* 画面全体のデザイン */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  background-color: #09090b;
+  color: #e4e4e7;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  /* 目の細かいグリッド背景を表示 */
+  background-image: 
+    linear-gradient(to right, #27272a 1px, transparent 1px),
+    linear-gradient(to bottom, #27272a 1px, transparent 1px);
+  background-size: 40px 40px;
+  overflow: hidden; /* アプリっぽく画面スクロールを止める */
+}
+
+/* スクロールバーをカッコよくする */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #18181b; 
+}
+::-webkit-scrollbar-thumb {
+  background: #3f3f46; 
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #FBBF24; 
+}
+
+/* 入力フォームのフォーカス時に黄色い枠を出す */
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: #FBBF24;
+  box-shadow: 0 0 0 1px #FBBF24;
 }
