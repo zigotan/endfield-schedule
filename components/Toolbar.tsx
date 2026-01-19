@@ -1,7 +1,8 @@
+// src/components/Toolbar.tsx
 import React from 'react';
 import { 
   Download, ZoomIn, MoveHorizontal, ChevronLeft, ChevronRight, 
-  Clock, Lock 
+  Clock, Lock, Youtube 
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { EventType } from '../types';
@@ -37,11 +38,18 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   isAdmin,
   setShowLoginModal,
 }) => {
+  const CHANNEL_URL = "https://www.youtube.com/@zigotan"; 
+
   return (
     <header className="flex-none min-h-14 border-b border-zinc-800 flex flex-col md:flex-row items-center justify-between px-4 md:px-6 py-2 md:py-0 bg-[#18181b]/80 backdrop-blur-md z-50 relative gap-2 md:gap-0">
       
-      {/* 上段：日付操作と管理者ボタン */}
+      {/* 上段 */}
       <div className="flex items-center justify-between w-full md:w-auto gap-2">
+        {/* 常設YouTubeリンク */}
+        <a href={CHANNEL_URL} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center w-8 h-8 bg-[#FF0000] text-white rounded hover:bg-[#CC0000] transition-colors shadow-lg" title="Official Channel">
+           <Youtube size={18} fill="white" />
+        </a>
+
         {enableAdminFeatures && !isAdmin && (
           <button onClick={() => setShowLoginModal(true)} className="flex items-center gap-1 text-[10px] text-zinc-500 hover:text-white border border-zinc-800 bg-black/50 px-2 py-1 rounded whitespace-nowrap">
             <Lock size={12} /> <span className="hidden md:inline">LOGIN</span>
@@ -54,7 +62,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
         </div>
       </div>
       
-      {/* 中段：フィルターボタン（スマホでは横スクロール） */}
+      {/* 中段 */}
       <div className="w-full md:w-auto overflow-x-auto no-scrollbar">
         <div className="flex items-center bg-black/40 rounded border border-white/5 p-1 gap-1 min-w-max">
            {['all', 'main', 'story', 'event', 'high_difficulty', 'gacha', 'campaign'].map(t => (
@@ -63,7 +71,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
         </div>
       </div>
       
-      {/* 下段：更新日時とズーム操作 */}
+      {/* 下段 */}
       <div className="flex items-center gap-2 w-full md:w-auto justify-end hidden md:flex">
         {lastUpdated && (
           <div className="flex items-center gap-2 px-3 py-1.5 border border-red-900/50 bg-red-900/10 rounded-sm">

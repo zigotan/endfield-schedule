@@ -10,7 +10,7 @@ import { GameEvent, EventType, WeekMarker } from '../types';
 import { AdminPanel } from '../components/AdminPanel';
 import { Toolbar } from '../components/Toolbar';
 import { TimelineCanvas } from '../components/TimelineCanvas';
-import { EventModal } from '../components/EventModal'; // ★追加
+import { EventModal } from '../components/EventModal';
 
 // --- Supabase Client ---
 const supabase = createClient(
@@ -31,6 +31,9 @@ export default function Home() {
   const [weeks, setWeeks] = useState<WeekMarker[]>([]);
   const [lastUpdated, setLastUpdated] = useState<string>('');
 
+  // 次回バージョンアップ予定日
+  const [nextUpdateDate, setNextUpdateDate] = useState('2026-03-10');
+
   // 管理者機能設定
   const enableAdminFeatures = process.env.NEXT_PUBLIC_ENABLE_ADMIN === 'true';
   const [isAdmin, setIsAdmin] = useState(false);
@@ -38,7 +41,7 @@ export default function Home() {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
 
-  // モーダル用State ★追加
+  // モーダル用State
   const [selectedEvent, setSelectedEvent] = useState<GameEvent | null>(null);
 
   // 期間計算
@@ -75,7 +78,7 @@ export default function Home() {
     fetchCloudData();
   }, []);
 
-  // --- 期間変更ごとの再計算 & ★自動スクロール ---
+  // --- 期間変更ごとの再計算 & 自動スクロール ---
   useEffect(() => {
     const now = new Date();
     if (isWithinInterval(now, { start: currentPeriodStart, end: currentPeriodEnd })) {
@@ -83,12 +86,10 @@ export default function Home() {
       const percent = (diff / totalDaysInView) * 100;
       setTodayPercent(percent);
 
-      // ★候補1: 自動スクロール機能 (読み込み完了後、少し待ってから実行)
       if (isLoaded) {
         setTimeout(() => {
           const container = document.getElementById('main-scroll-container');
           if (container) {
-            // 今日の位置(px) - 画面の半分 = 画面中央に今日が来る
             const scrollPos = (canvasWidth * (percent / 100)) - (container.clientWidth / 2);
             container.scrollTo({ left: Math.max(0, scrollPos), behavior: 'smooth' });
           }
@@ -111,7 +112,7 @@ export default function Home() {
       currentDate = addDays(currentDate, 7);
     }
     setWeeks(weekMarkers);
-  }, [year, viewStartMonth, totalDaysInView, isLoaded]); // isLoadedを依存配列に追加
+  }, [year, viewStartMonth, totalDaysInView, isLoaded]);
 
   // --- クラウド同期 ---
   const syncToCloud = async (newEvents: GameEvent[]) => {
@@ -150,7 +151,8 @@ export default function Home() {
   const [inputTitle, setInputTitle] = useState('');
   const [inputStart, setInputStart] = useState('2026-01-22');
   const [inputEnd, setInputEnd] = useState('2026-02-10');
-  const [inputDesc, setInputDesc] = useState(''); // ★追加
+  const [inputDesc, setInputDesc] = useState('');
+  // inputVideo は削除しました
   const [inputType, setInputType] = useState<EventType>('event');
   const [inputImage, setInputImage] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -165,7 +167,7 @@ export default function Home() {
       endDate: inputEnd,
       type: inputType,
       bannerImage: inputImage || undefined,
-      description: inputDesc, // ★追加
+      description: inputDesc,
     };
     const newEvents = isEditing && editingId 
       ? events.map(e => e.id === editingId ? newEvent : e)
@@ -176,7 +178,7 @@ export default function Home() {
     setIsEditing(false);
     setEditingId(null);
     setInputTitle('');
-    setInputDesc(''); // ★追加
+    setInputDesc('');
     setInputImage(null);
   };
 
@@ -264,21 +266,21 @@ export default function Home() {
     }
   };
 
-  // イベントクリックハンドラ (編集フォームへのセット & モーダル表示)
+  // クリック時の挙動分岐
   const handleEventClick = (event: GameEvent) => {
-    // 誰でもモーダルは見れる
-    setSelectedEvent(event);
-
-    // 管理者ならフォームにも値を入れる
     if (isAdmin) {
       setIsEditing(true);
       setEditingId(event.id);
       setInputTitle(event.title);
       setInputStart(event.startDate);
       setInputEnd(event.endDate);
-      setInputDesc(event.description || ''); // ★追加
+      setInputDesc(event.description || '');
       setInputType(event.type);
       setInputImage(event.bannerImage || null);
+      
+      setSelectedEvent(null);
+    } else {
+      setSelectedEvent(event);
     }
   };
 
@@ -331,8 +333,8 @@ export default function Home() {
             inputStart={inputStart}
             setInputStart={setInputStart}
             inputEnd={inputEnd}
-            inputDesc={inputDesc} // ★追加
-            setInputDesc={setInputDesc} // ★追加
+            inputDesc={inputDesc}
+            setInputDesc={setInputDesc}
             setInputEnd={setInputEnd}
             inputType={inputType}
             setInputType={setInputType}
@@ -342,7 +344,7 @@ export default function Home() {
             isSyncing={isSyncing}
             handleJsonExport={handleJsonExport}
             handleJsonImport={handleJsonImport}
-            handleDeleteEvent={handleDeleteEvent} // ★追加
+            handleDeleteEvent={handleDeleteEvent}
         />
       )}
 
@@ -400,15 +402,16 @@ export default function Home() {
             handleDragStart={handleDragStart}
             handleDragEnter={handleDragEnter}
             handleDragEnd={handleDragEnd}
-            handleEdit={handleEventClick} // ★変更: クリック時にモーダルを開く関数を渡す
+            handleEdit={handleEventClick} 
+            nextUpdateDate={nextUpdateDate}
           />
         </div>
         
-        {/* ★イベント詳細モーダル */}
         {selectedEvent && (
           <EventModal 
             event={selectedEvent} 
             onClose={() => setSelectedEvent(null)} 
+            nextUpdateDate={nextUpdateDate}
           />
         )}
 
