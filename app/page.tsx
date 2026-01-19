@@ -1,55 +1,37 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from 'react';
-import { 
-  BarChart3, Plus, Trash2, Download, Monitor, Image as ImageIcon, X, FileJson, Edit3, ZoomIn, MoveHorizontal, RotateCcw, Calendar as CalendarIcon, Crosshair, Bug, GripVertical, ChevronLeft, ChevronRight, History, FileDown, RefreshCw, AlertTriangle, Filter, Clock, Cloud, Lock, Unlock, Info
-} from 'lucide-react';
-import { differenceInDays, parseISO, startOfYear, format, nextMonday, isMonday, addDays, addMonths, endOfMonth, isWithinInterval } from 'date-fns';
+import { differenceInDays, format, nextMonday, isMonday, addDays, addMonths, endOfMonth, isWithinInterval } from 'date-fns';
 import { toPng } from 'html-to-image';
 import { createClient } from '@supabase/supabase-js';
 
-// --- Supabase Client (読み取り専用) ---
+// 作成したコンポーネントを3つとも読み込み
+import { GameEvent, EventType, WeekMarker } from '../types';
+import { AdminPanel } from '../components/AdminPanel';
+import { Toolbar } from '../components/Toolbar';
+import { TimelineCanvas } from '../components/TimelineCanvas'; // ★追加
+
+// --- Supabase Client ---
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-// --- 型定義 ---
-type EventType = 'main' | 'story' | 'event' | 'high_difficulty' | 'gacha' | 'campaign';
-
-interface GameEvent {
-  id: string;
-  title: string;
-  startDate: string;
-  endDate: string;
-  type: EventType;
-  bannerImage?: string; 
-}
-
-interface WeekMarker {
-  percent: number;
-  label: string;
-}
-
 export default function Home() {
   // --- データ管理 ---
   const [year, setYear] = useState(2026);
   const [viewStartMonth, setViewStartMonth] = useState(0); 
-  const [activeTab, setActiveTab] = useState<'timeline' | 'calendar'>('timeline');
   const [canvasWidth, setCanvasWidth] = useState(1600);
   const [filterType, setFilterType] = useState<EventType | 'all'>('all');
   
   const [events, setEvents] = useState<GameEvent[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
   const [todayPercent, setTodayPercent] = useState<number | null>(null);
-  const [debugInfo, setDebugInfo] = useState('');
   const [weeks, setWeeks] = useState<WeekMarker[]>([]);
   const [lastUpdated, setLastUpdated] = useState<string>('');
 
-  // 管理者機能の有効化判定
+  // 管理者機能設定
   const enableAdminFeatures = process.env.NEXT_PUBLIC_ENABLE_ADMIN === 'true';
-
-  // 管理者モード
   const [isAdmin, setIsAdmin] = useState(false);
   const [passwordInput, setPasswordInput] = useState('');
   const [showLoginModal, setShowLoginModal] = useState(false);
@@ -62,7 +44,6 @@ export default function Home() {
 
   const dragItem = useRef<number | null>(null);
   const dragOverItem = useRef<number | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // --- 初期化 & データ取得 ---
   useEffect(() => {
@@ -83,7 +64,6 @@ export default function Home() {
       }
       setIsLoaded(true);
     };
-
     fetchCloudData();
   }, []);
 
@@ -97,7 +77,6 @@ export default function Home() {
     } else {
       setTodayPercent(null);
     }
-    setDebugInfo(`RANGE:${format(currentPeriodStart, 'yyyy/MM')}-${format(currentPeriodEnd, 'MM')} | DAYS:${totalDaysInView}`);
 
     const weekMarkers: WeekMarker[] = [];
     let currentDate = currentPeriodStart;
@@ -118,16 +97,13 @@ export default function Home() {
   const syncToCloud = async (newEvents: GameEvent[]) => {
     if (!isAdmin) return;
     setIsSyncing(true);
-    
     try {
       const res = await fetch('/api/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password: passwordInput, events: newEvents }),
       });
-
       if (!res.ok) throw new Error('Auth Failed');
-      
       const nowStr = format(new Date(), 'yyyy/MM/dd HH:mm');
       setLastUpdated(nowStr);
     } catch (e) {
@@ -138,7 +114,6 @@ export default function Home() {
     }
   };
 
-  // --- 認証 ---
   const handleLogin = () => {
     if (passwordInput) {
       setIsAdmin(true);
@@ -146,13 +121,12 @@ export default function Home() {
     }
   };
 
-  // --- 操作系 ---
   const handleEditSave = (newEvents: GameEvent[]) => {
     setEvents(newEvents);
     syncToCloud(newEvents);
   };
 
-  // 入力フォーム状態
+  // 編集フォーム状態
   const [inputTitle, setInputTitle] = useState('');
   const [inputStart, setInputStart] = useState('2026-01-22');
   const [inputEnd, setInputEnd] = useState('2026-02-10');
@@ -174,7 +148,6 @@ export default function Home() {
     const newEvents = isEditing && editingId 
       ? events.map(e => e.id === editingId ? newEvent : e)
       : [...events, newEvent];
-    
     handleEditSave(newEvents);
     setIsEditing(false);
     setEditingId(null);
@@ -182,15 +155,7 @@ export default function Home() {
     setInputImage(null);
   };
 
-  const handleDeleteEvent = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!isAdmin) return;
-    if(confirm("Delete this event?")) {
-      const newEvents = events.filter(e => e.id !== id);
-      handleEditSave(newEvents);
-    }
-  };
-
+  // ドラッグ操作
   const handleDragStart = (position: number) => { dragItem.current = position; };
   const handleDragEnter = (position: number) => { dragOverItem.current = position; };
   const handleDragEnd = () => {
@@ -206,37 +171,11 @@ export default function Home() {
     dragOverItem.current = null;
   };
 
-  const getPosition = (dateStr: string) => {
-    const date = parseISO(dateStr);
-    const diff = differenceInDays(date, currentPeriodStart);
-    return (diff / totalDaysInView) * 100;
-  };
-
-  const getWidth = (startStr: string, endStr: string) => {
-    const start = parseISO(startStr);
-    const end = parseISO(endStr);
-    const duration = differenceInDays(end, start) + 1;
-    return (duration / totalDaysInView) * 100;
-  };
-
+  // 月移動
   const handlePrevMonth = () => setViewStartMonth(prev => prev - 1);
   const handleNextMonth = () => setViewStartMonth(prev => prev + 1);
   
-  const handleJumpToToday = () => {
-    if (todayPercent === null) {
-      const now = new Date();
-      if (now.getFullYear() === year) setViewStartMonth(now.getMonth());
-      return;
-    }
-    const scrollContainer = document.getElementById('main-scroll-container');
-    if (scrollContainer) {
-      const pixelPos = (canvasWidth * todayPercent) / 100;
-      const containerCenter = scrollContainer.clientWidth / 2;
-      let targetScroll = pixelPos - containerCenter;
-      scrollContainer.scrollTo({ left: targetScroll, behavior: 'smooth' });
-    }
-  };
-
+  // エクスポート
   const handleExport = async () => {
     const element = document.getElementById('schedule-canvas');
     if (element) {
@@ -249,6 +188,7 @@ export default function Home() {
       link.click();
     }
   };
+
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -257,6 +197,7 @@ export default function Home() {
       reader.readAsDataURL(file);
     }
   };
+
   const handleEdit = (event: GameEvent) => {
     if (!isAdmin) return;
     setIsEditing(true);
@@ -268,7 +209,6 @@ export default function Home() {
     setInputImage(event.bannerImage || null);
   };
 
-  // JSON バックアップ機能
   const handleJsonExport = () => {
     const dataStr = JSON.stringify(events, null, 2);
     const blob = new Blob([dataStr], { type: "application/json" });
@@ -282,7 +222,6 @@ export default function Home() {
   const handleJsonImport = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     const reader = new FileReader();
     reader.onload = (event) => {
       try {
@@ -293,7 +232,7 @@ export default function Home() {
              alert('読み込み成功！データが更新されました。');
           }
         } else {
-          alert('ファイル形式が正しくありません (配列ではありません)');
+          alert('ファイル形式が正しくありません');
         }
       } catch (err) {
         alert('読み込みに失敗しました');
@@ -302,134 +241,61 @@ export default function Home() {
     reader.readAsText(file);
   };
 
-  const getTypeColor = (type: EventType) => {
-    switch(type) {
-      case 'main': return 'bg-white text-black';
-      case 'story': return 'bg-cyan-400 text-black';
-      case 'event': return 'bg-emerald-500 text-black';
-      case 'high_difficulty': return 'bg-purple-600 text-white';
-      case 'gacha': return 'bg-red-600 text-white';
-      case 'campaign': return 'bg-amber-400 text-black';
-      default: return 'bg-zinc-500 text-white';
-    }
-  };
-  const getTypeBarColor = (type: EventType) => {
-    switch(type) {
-      case 'main': return 'bg-zinc-200';
-      case 'story': return 'bg-cyan-400';
-      case 'event': return 'bg-emerald-500';
-      case 'high_difficulty': return 'bg-purple-600';
-      case 'gacha': return 'bg-red-600';
-      case 'campaign': return 'bg-amber-400';
-      default: return 'bg-zinc-500';
-    }
-  };
-
   if (!isLoaded) return <div className="h-screen w-full bg-[#09090b] flex items-center justify-center text-zinc-500 font-mono">CONNECTING TO SATELLITE...</div>;
 
   return (
     <div className="flex h-screen w-full bg-[#09090b] text-zinc-200 font-sans selection:bg-amber-400 selection:text-black overflow-hidden">
       
-      {/* --- 左パネル (管理者かつ許可されている時のみ表示) --- */}
+      {/* 1. 左パネル (管理者用) */}
       {isAdmin && enableAdminFeatures && (
-        <aside className="w-80 flex flex-col border-r border-zinc-800 bg-[#18181b] z-20 shadow-xl flex-shrink-0">
-          <div className="p-5 border-b border-zinc-800 flex justify-between items-center">
-            <h1 className="text-xl font-bold tracking-wider text-amber-400 uppercase flex items-center gap-2">
-              <Monitor size={20} /> ADMIN
-            </h1>
-            <button onClick={() => setIsAdmin(false)} className="text-[10px] bg-red-900/30 text-red-400 px-2 py-1 rounded border border-red-900">LOGOUT</button>
-          </div>
-          
-          <div className="p-5 space-y-4 border-b border-zinc-800 bg-zinc-900/50 overflow-y-auto max-h-[60vh]">
-            {/* 入力フォーム */}
-            <div className="flex justify-between items-center">
-               <h2 className="text-xs font-bold text-zinc-500 uppercase tracking-widest">{isEditing ? 'EDIT ENTRY' : 'NEW ENTRY'}</h2>
-               {isEditing && <button onClick={() => setIsEditing(false)} className="text-[10px] text-red-400 hover:underline">CANCEL</button>}
-            </div>
-            <div className="space-y-1"><label className="text-xs text-zinc-500">Title</label><input type="text" value={inputTitle} onChange={(e) => setInputTitle(e.target.value)} className="w-full bg-black border border-zinc-700 p-2 text-sm text-white focus:border-amber-400 outline-none rounded-sm" /></div>
-            <div className="grid grid-cols-2 gap-2">
-              <div className="space-y-1"><label className="text-xs text-zinc-500">Start</label><input type="date" value={inputStart} onChange={(e) => setInputStart(e.target.value)} className="w-full bg-black border border-zinc-700 p-2 text-sm text-white rounded-sm" /></div>
-              <div className="space-y-1"><label className="text-xs text-zinc-500">End</label><input type="date" value={inputEnd} onChange={(e) => setInputEnd(e.target.value)} className="w-full bg-black border border-zinc-700 p-2 text-sm text-white rounded-sm" /></div>
-            </div>
-            <div className="space-y-1"><label className="text-xs text-zinc-500">Type</label>
-              <select value={inputType} onChange={(e) => setInputType(e.target.value as EventType)} className="w-full bg-black border border-zinc-700 p-2 text-sm text-white rounded-sm">
-                <option value="main">Main (White)</option><option value="story">Story (Cyan)</option><option value="event">Event (Green)</option><option value="high_difficulty">High-Diff (Purple)</option><option value="gacha">Gacha (Red)</option><option value="campaign">Campaign (Yellow)</option>
-              </select>
-            </div>
-            <div className="space-y-1"><label className="text-xs text-zinc-500">Image</label>
-              <button onClick={() => fileInputRef.current?.click()} className="w-full bg-zinc-800 border border-zinc-700 p-2 text-xs text-zinc-300 rounded-sm flex justify-center gap-2"><ImageIcon size={14}/> {inputImage ? 'Change' : 'Select'}</button>
-              <input type="file" ref={fileInputRef} onChange={handleImageUpload} className="hidden" />
-            </div>
-            <button onClick={handleSaveEntry} disabled={isSyncing} className="w-full py-2 mt-4 bg-amber-400 text-black font-bold text-sm uppercase hover:bg-white rounded-sm disabled:opacity-50">
-              {isSyncing ? 'SYNCING...' : (isEditing ? 'UPDATE' : 'ADD DATA')}
-            </button>
-
-            {/* バックアップボタン */}
-            <div className="pt-4 border-t border-zinc-800 mt-4">
-              <h2 className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-2">BACKUP / RESTORE</h2>
-              <div className="grid grid-cols-2 gap-2">
-                 <button onClick={handleJsonExport} className="flex items-center justify-center gap-1 bg-zinc-800 border border-zinc-700 p-2 text-[10px] text-zinc-300 rounded-sm hover:bg-zinc-700 hover:text-white transition-colors">
-                    <FileDown size={14}/> SAVE FILE
-                 </button>
-                 <label className="flex items-center justify-center gap-1 bg-zinc-800 border border-zinc-700 p-2 text-[10px] text-zinc-300 rounded-sm hover:bg-zinc-700 hover:text-white transition-colors cursor-pointer">
-                    <FileJson size={14}/> LOAD FILE
-                    <input type="file" onChange={handleJsonImport} className="hidden" accept=".json"/>
-                 </label>
-              </div>
-            </div>
-
-          </div>
-        </aside>
+        <AdminPanel
+            isAdmin={isAdmin}
+            setIsAdmin={setIsAdmin}
+            isEditing={isEditing}
+            setIsEditing={setIsEditing}
+            inputTitle={inputTitle}
+            setInputTitle={setInputTitle}
+            inputStart={inputStart}
+            setInputStart={setInputStart}
+            inputEnd={inputEnd}
+            setInputEnd={setInputEnd}
+            inputType={inputType}
+            setInputType={setInputType}
+            inputImage={inputImage}
+            handleImageUpload={handleImageUpload}
+            handleSaveEntry={handleSaveEntry}
+            isSyncing={isSyncing}
+            handleJsonExport={handleJsonExport}
+            handleJsonImport={handleJsonImport}
+        />
       )}
 
-      {/* === 中央パネル === */}
+      {/* 2. メインエリア */}
       <main className="flex-1 flex flex-col min-w-0 h-full relative bg-[#09090b] overflow-hidden">
         <div className="absolute inset-0 pointer-events-none opacity-20" style={{ backgroundImage: 'linear-gradient(#27272a 1px, transparent 1px), linear-gradient(90deg, #27272a 1px, transparent 1px)', backgroundSize: '40px 40px' }}></div>
 
-        {/* ツールバー */}
-        <header className="flex-none h-14 border-b border-zinc-800 flex items-center justify-between px-6 bg-[#18181b]/80 backdrop-blur-md z-50 relative">
-          <div className="flex items-center gap-2">
-            {/* 管理者ボタン (許可証があり、未ログイン時のみ表示) */}
-            {enableAdminFeatures && !isAdmin && (
-              <button onClick={() => setShowLoginModal(true)} className="mr-4 flex items-center gap-1 text-[10px] text-zinc-500 hover:text-white border border-zinc-800 bg-black/50 px-2 py-1 rounded">
-                <Lock size={12} /> ADMIN LOGIN
-              </button>
-            )}
+        {/* 2-1. ツールバー */}
+        <Toolbar
+          currentPeriodStart={currentPeriodStart}
+          currentPeriodEnd={currentPeriodEnd}
+          handlePrevMonth={handlePrevMonth}
+          handleNextMonth={handleNextMonth}
+          filterType={filterType}
+          setFilterType={setFilterType}
+          lastUpdated={lastUpdated}
+          canvasWidth={canvasWidth}
+          setCanvasWidth={setCanvasWidth}
+          handleExport={handleExport}
+          enableAdminFeatures={enableAdminFeatures}
+          isAdmin={isAdmin}
+          setShowLoginModal={setShowLoginModal}
+        />
 
-            <div className="flex items-center bg-black/40 rounded border border-white/5 p-1 mr-2">
-              <button onClick={handlePrevMonth} className="p-1 hover:text-amber-400 text-zinc-400"><ChevronLeft size={16} /></button>
-              <span className="px-3 text-xs font-mono text-white font-bold min-w-[140px] text-center">{format(currentPeriodStart, 'yyyy/MM')} - {format(currentPeriodEnd, 'yyyy/MM')}</span>
-              <button onClick={handleNextMonth} className="p-1 hover:text-amber-400 text-zinc-400"><ChevronRight size={16} /></button>
-            </div>
-            <div className="flex items-center bg-black/40 rounded border border-white/5 p-1 gap-1">
-               {['all', 'main', 'story', 'event', 'high_difficulty', 'gacha', 'campaign'].map(t => (
-                 <button key={t} onClick={() => setFilterType(t as any)} className={`px-2 py-0.5 text-[10px] font-bold rounded-sm uppercase ${filterType === t ? 'bg-zinc-600 text-white' : 'text-zinc-500 hover:text-zinc-300'}`}>{t === 'high_difficulty' ? 'HIGH' : t}</button>
-               ))}
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-4">
-            {lastUpdated && (
-              <div className="flex items-center gap-2 px-3 py-1.5 border border-red-900/50 bg-red-900/10 rounded-sm">
-                <Clock size={14} className="text-red-500" />
-                <span className="text-xs font-mono font-bold text-red-500">UPDATE: {lastUpdated}</span>
-              </div>
-            )}
-            <div className="flex items-center gap-2 bg-black/40 px-3 py-1 rounded border border-white/5">
-              <MoveHorizontal size={14} className="text-zinc-500" /><input type="range" min="800" max="5000" value={canvasWidth} onChange={(e) => setCanvasWidth(Number(e.target.value))} className="w-32 accent-amber-400 cursor-pointer h-1" /><ZoomIn size={14} className="text-zinc-500" />
-            </div>
-            {/* EXPORTボタン (許可証がある時のみ表示) */}
-            {enableAdminFeatures && (
-               <button onClick={handleExport} className="flex items-center gap-2 px-4 py-2 border border-amber-400 text-amber-400 font-bold text-xs uppercase hover:bg-amber-400 hover:text-black transition-colors rounded-sm"><Download size={14} /> EXPORT</button>
-            )}
-          </div>
-        </header>
-
-        {/* LOGIN MODAL */}
+        {/* 2-2. ログインモーダル */}
         {showLoginModal && (
           <div className="absolute inset-0 z-[100] bg-black/90 flex items-center justify-center p-4">
              <div className="w-80 bg-[#18181b] border border-amber-400/50 p-6 rounded shadow-2xl text-center">
-               <h3 className="text-amber-400 font-bold text-lg mb-4 flex justify-center gap-2"><Lock /> SECURITY CHECK</h3>
+               <div className="text-amber-400 font-bold text-lg mb-4 flex justify-center gap-2 items-center">SECURITY CHECK</div>
                <input type="password" value={passwordInput} onChange={(e) => setPasswordInput(e.target.value)} placeholder="ENTER PASSWORD" className="w-full bg-black border border-zinc-700 p-2 text-white text-center font-mono mb-4 focus:border-amber-400 outline-none" />
                <div className="flex gap-2">
                  <button onClick={() => setShowLoginModal(false)} className="flex-1 py-2 border border-zinc-700 text-zinc-400 hover:text-white">CANCEL</button>
@@ -439,75 +305,24 @@ export default function Home() {
           </div>
         )}
 
-        {/* スクロールエリア */}
+        {/* 2-3. スクロールエリア (タイムライン本体) */}
         <div id="main-scroll-container" className="flex-1 overflow-auto flex items-start relative z-0">
-          <div id="schedule-canvas" className="bg-[#09090b] border border-zinc-800 relative shadow-2xl flex-shrink-0 transition-all duration-300 mx-auto" style={{ width: `${canvasWidth}px`, minHeight: '100%' }}>
-            {/* Sticky Header */}
-            <div className="sticky top-0 z-50 bg-[#09090b] border-b border-zinc-800 shadow-xl">
-              <div className="p-6 pb-2 flex justify-between items-end relative z-20 bg-[#09090b]">
-                <div className="sticky left-0 z-30 bg-[#09090b]/95 backdrop-blur-sm pr-4">
-                  <h2 className="text-4xl font-black text-white tracking-tighter uppercase italic">Event Schedule</h2>
-                  <div className="flex items-center gap-2 mt-1"><span className="bg-amber-400 text-black text-[10px] font-bold px-1">OFFICIAL_DATA</span><p className="text-xs text-amber-400 font-mono tracking-widest">ARKNIGHTS: ENDFIELD</p></div>
-                  
-                  {/* 注意事項 */}
-                  <p className="text-[10px] text-zinc-500 mt-2 font-mono flex items-center gap-1">
-                    <Info size={10} />
-                    ※開催期間は予告なく変更される場合があります。終了時期が未定のイベントは仮の日付で表示されています。
-                  </p>
-                  
-                  {/* 権利表記 (©GRYPHLINE) */}
-                  <div className="mt-3 pt-2 border-t border-zinc-800/50">
-                    <p className="text-[9px] text-zinc-600 leading-relaxed font-sans">
-                      This is an unofficial fan site. <br/>
-                      All images and contents are ©GRYPHLINE. <br/>
-                      当サイトは非公式のファンサイトであり、公式運営企業とは一切関係ありません。
-                    </p>
-                  </div>
-
-                </div>
-                <div className="text-right"><div className="text-5xl font-bold text-zinc-800 font-mono select-none">{year}</div></div>
-                <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-amber-400 z-40"></div><div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-amber-400 z-40"></div>
-              </div>
-              <div className="h-8 w-full relative border-t border-zinc-800 bg-[#09090b]">
-                 {weeks.map((week, i) => (<div key={`header-${i}`} className="absolute bottom-1 text-sm text-zinc-300 font-bold font-mono -ml-3" style={{ left: `${week.percent}%` }}>{week.label}</div>))}
-                 {todayPercent !== null && (<div className="absolute top-0 bottom-0 border-l-2 border-red-500 z-50" style={{ left: `${todayPercent}%` }}><div className="absolute -top-1 left-1 bg-red-600 text-white text-[10px] font-bold px-2 py-0.5 whitespace-nowrap rounded-sm shadow-md">TODAY</div></div>)}
-              </div>
-            </div>
-
-            <div className="relative p-6 min-h-[600px] bg-[#09090b] overflow-hidden">
-              <div className="absolute inset-0 px-0 z-0 pointer-events-none">{weeks.map((week, i) => (<div key={`line-${i}`} className="absolute top-0 bottom-0 border-l border-zinc-700 opacity-40" style={{ left: `${week.percent}%` }}></div>))}</div>
-              {todayPercent !== null && (<div className="absolute top-0 bottom-0 z-[40] pointer-events-none" style={{ left: `${todayPercent}%`, width: '2px', backgroundColor: '#EF4444', boxShadow: '0 0 10px 2px rgba(239, 68, 68, 0.6)' }}></div>)}
-
-              <div className="relative z-10 space-y-10 pt-4">
-                {events.filter(e => filterType === 'all' || e.type === filterType).map((event, index) => {
-                  const leftPosPercent = getPosition(event.startDate);
-                  const widthPercent = getWidth(event.startDate, event.endDate);
-                  if ((leftPosPercent + widthPercent) < 0 || leftPosPercent > 100) return null;
-                  const pixelsPerPercent = canvasWidth / 100;
-                  const hiddenLeftPixels = leftPosPercent < 0 ? Math.abs(leftPosPercent) * pixelsPerPercent : 0;
-                  const barTotalWidthPx = widthPercent * pixelsPerPercent;
-                  const safePadding = Math.min(hiddenLeftPixels, Math.max(0, barTotalWidthPx - 100));
-
-                  return (
-                    <div key={event.id} className="relative group" draggable={isAdmin && enableAdminFeatures && filterType === 'all'} onDragStart={() => handleDragStart(index)} onDragEnter={() => handleDragEnter(index)} onDragEnd={handleDragEnd} onDragOver={(e) => e.preventDefault()} style={{ left: `${leftPosPercent}%`, width: `${widthPercent}%`, position: 'relative', cursor: (isAdmin && enableAdminFeatures && filterType === 'all') ? 'grab' : 'default' }}>
-                       <div className="w-full relative">
-                          <div className="flex items-center gap-2 mb-1" style={{ paddingLeft: `${safePadding}px`, transition: 'padding-left 0.05s linear' }}>
-                             {(isAdmin && enableAdminFeatures && filterType === 'all') && <div className="text-zinc-600 hover:text-amber-400 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"><GripVertical size={16} /></div>}
-                             <span className={`text-[10px] font-bold px-1.5 py-0.5 uppercase tracking-wider flex-shrink-0 ${getTypeColor(event.type)}`}>{event.type.toUpperCase()}</span>
-                             <span className="text-sm font-bold text-zinc-200 drop-shadow-md shadow-black whitespace-nowrap cursor-pointer hover:underline flex-shrink-0" onClick={() => handleEdit(event)}>{event.title}</span>
-                             <span className="text-[10px] text-zinc-500 font-mono whitespace-nowrap ml-1 opacity-70 flex-shrink-0">{format(parseISO(event.startDate), 'MM/dd')} - {format(parseISO(event.endDate), 'MM/dd')}</span>
-                          </div>
-                          <div className={`w-full ${getTypeBarColor(event.type)} shadow-[0_0_20px_rgba(0,0,0,0.5)] relative overflow-hidden rounded-sm border border-white/10`} style={{ height: event.bannerImage ? 'auto' : '4rem' }} onClick={() => handleEdit(event)}>
-                            {event.bannerImage ? <img src={event.bannerImage} alt="Banner" className="w-full h-auto block opacity-100 transition-opacity" /> : <div className="absolute inset-0 w-full h-full opacity-30" style={{ backgroundImage: 'linear-gradient(45deg, #000 25%, transparent 25%, transparent 50%, #000 50%, #000 75%, transparent 75%, transparent)', backgroundSize: '8px 8px' }}></div>}
-                          </div>
-                       </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-            <div className="relative z-50 bg-[#09090b] border-t border-zinc-800 p-4 flex justify-end"><div className="text-[10px] text-zinc-600 font-mono">SYS: ONLINE | CLOUD SYNC ACTIVE</div><div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-amber-400"></div><div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-amber-400"></div></div>
-          </div>
+          <TimelineCanvas 
+            year={year}
+            weeks={weeks}
+            todayPercent={todayPercent}
+            events={events}
+            filterType={filterType}
+            canvasWidth={canvasWidth}
+            isAdmin={isAdmin}
+            enableAdminFeatures={enableAdminFeatures}
+            currentPeriodStart={currentPeriodStart}
+            totalDaysInView={totalDaysInView}
+            handleDragStart={handleDragStart}
+            handleDragEnter={handleDragEnter}
+            handleDragEnd={handleDragEnd}
+            handleEdit={handleEdit}
+          />
         </div>
       </main>
     </div>
