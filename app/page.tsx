@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { 
-  BarChart3, Plus, Trash2, Download, Monitor, Image as ImageIcon, X, FileJson, Edit3, ZoomIn, MoveHorizontal, RotateCcw, Calendar as CalendarIcon, Crosshair, Bug, GripVertical, ChevronLeft, ChevronRight, History, FileDown, RefreshCw, AlertTriangle, Filter, Clock, Cloud, Lock, Unlock
+  BarChart3, Plus, Trash2, Download, Monitor, Image as ImageIcon, X, FileJson, Edit3, ZoomIn, MoveHorizontal, RotateCcw, Calendar as CalendarIcon, Crosshair, Bug, GripVertical, ChevronLeft, ChevronRight, History, FileDown, RefreshCw, AlertTriangle, Filter, Clock, Cloud, Lock, Unlock, Info
 } from 'lucide-react';
 import { differenceInDays, parseISO, startOfYear, format, nextMonday, isMonday, addDays, addMonths, endOfMonth, isWithinInterval } from 'date-fns';
 import { toPng } from 'html-to-image';
@@ -46,7 +46,7 @@ export default function Home() {
   const [weeks, setWeeks] = useState<WeekMarker[]>([]);
   const [lastUpdated, setLastUpdated] = useState<string>('');
 
-  // ▼▼▼ 管理者機能の有効化判定 (環境変数をチェック) ▼▼▼
+  // 管理者機能の有効化判定
   const enableAdminFeatures = process.env.NEXT_PUBLIC_ENABLE_ADMIN === 'true';
 
   // 管理者モード
@@ -67,7 +67,6 @@ export default function Home() {
   // --- 初期化 & データ取得 ---
   useEffect(() => {
     const fetchCloudData = async () => {
-      // Supabaseからデータ取得 (読み取り専用)
       const { data, error } = await supabase
         .from('game_events')
         .select('data, updated_at')
@@ -80,7 +79,6 @@ export default function Home() {
           setLastUpdated(format(new Date(data.updated_at), 'yyyy/MM/dd HH:mm'));
         }
       } else {
-        // データがない場合は初期値
         setEvents([{ id: '1', title: 'Welcome to Endfield Schedule', startDate: '2026-01-22', endDate: '2026-02-10', type: 'main' }]);
       }
       setIsLoaded(true);
@@ -116,12 +114,11 @@ export default function Home() {
     setWeeks(weekMarkers);
   }, [year, viewStartMonth, totalDaysInView]);
 
-  // --- クラウド同期 (書き込み) ---
+  // --- クラウド同期 ---
   const syncToCloud = async (newEvents: GameEvent[]) => {
-    if (!isAdmin) return; // 管理者でなければ何もしない
+    if (!isAdmin) return;
     setIsSyncing(true);
     
-    // API経由で安全に書き込み
     try {
       const res = await fetch('/api/sync', {
         method: 'POST',
@@ -135,7 +132,7 @@ export default function Home() {
       setLastUpdated(nowStr);
     } catch (e) {
       alert('Sync Failed: Incorrect Password or Network Error');
-      setIsAdmin(false); // 失敗したらログアウト
+      setIsAdmin(false);
     } finally {
       setIsSyncing(false);
     }
@@ -144,12 +141,12 @@ export default function Home() {
   // --- 認証 ---
   const handleLogin = () => {
     if (passwordInput) {
-      setIsAdmin(true); // 仮ログイン（実際の認証は保存時にAPIで行う）
+      setIsAdmin(true);
       setShowLoginModal(false);
     }
   };
 
-  // --- 操作系 (変更があったら syncToCloud を呼ぶ) ---
+  // --- 操作系 ---
   const handleEditSave = (newEvents: GameEvent[]) => {
     setEvents(newEvents);
     syncToCloud(newEvents);
@@ -194,7 +191,6 @@ export default function Home() {
     }
   };
 
-  // ドラッグ＆ドロップ関連
   const handleDragStart = (position: number) => { dragItem.current = position; };
   const handleDragEnter = (position: number) => { dragOverItem.current = position; };
   const handleDragEnd = () => {
@@ -210,7 +206,6 @@ export default function Home() {
     dragOverItem.current = null;
   };
 
-  // 計算ロジック
   const getPosition = (dateStr: string) => {
     const date = parseISO(dateStr);
     const diff = differenceInDays(date, currentPeriodStart);
@@ -224,7 +219,6 @@ export default function Home() {
     return (duration / totalDaysInView) * 100;
   };
 
-  // その他UI操作
   const handlePrevMonth = () => setViewStartMonth(prev => prev - 1);
   const handleNextMonth = () => setViewStartMonth(prev => prev + 1);
   
@@ -264,7 +258,7 @@ export default function Home() {
     }
   };
   const handleEdit = (event: GameEvent) => {
-    if (!isAdmin) return; // 閲覧者は編集不可
+    if (!isAdmin) return;
     setIsEditing(true);
     setEditingId(event.id);
     setInputTitle(event.title);
@@ -295,7 +289,7 @@ export default function Home() {
         const json = JSON.parse(event.target?.result as string);
         if (Array.isArray(json)) {
           if(confirm('現在のデータを上書きして読み込みますか？\n(注意: 現在の画面のデータは消えます)')) {
-             handleEditSave(json); // State更新とクラウド同期を同時に実行
+             handleEditSave(json);
              alert('読み込み成功！データが更新されました。');
           }
         } else {
@@ -347,6 +341,7 @@ export default function Home() {
           </div>
           
           <div className="p-5 space-y-4 border-b border-zinc-800 bg-zinc-900/50 overflow-y-auto max-h-[60vh]">
+            {/* 入力フォーム */}
             <div className="flex justify-between items-center">
                <h2 className="text-xs font-bold text-zinc-500 uppercase tracking-widest">{isEditing ? 'EDIT ENTRY' : 'NEW ENTRY'}</h2>
                {isEditing && <button onClick={() => setIsEditing(false)} className="text-[10px] text-red-400 hover:underline">CANCEL</button>}
@@ -369,7 +364,7 @@ export default function Home() {
               {isSyncing ? 'SYNCING...' : (isEditing ? 'UPDATE' : 'ADD DATA')}
             </button>
 
-            {/* バックアップ・リストア ボタン */}
+            {/* バックアップボタン */}
             <div className="pt-4 border-t border-zinc-800 mt-4">
               <h2 className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-2">BACKUP / RESTORE</h2>
               <div className="grid grid-cols-2 gap-2">
@@ -394,7 +389,7 @@ export default function Home() {
         {/* ツールバー */}
         <header className="flex-none h-14 border-b border-zinc-800 flex items-center justify-between px-6 bg-[#18181b]/80 backdrop-blur-md z-50 relative">
           <div className="flex items-center gap-2">
-            {/* ▼▼▼ 管理者ボタン (許可証があり、未ログイン時のみ表示) ▼▼▼ */}
+            {/* 管理者ボタン (許可証があり、未ログイン時のみ表示) */}
             {enableAdminFeatures && !isAdmin && (
               <button onClick={() => setShowLoginModal(true)} className="mr-4 flex items-center gap-1 text-[10px] text-zinc-500 hover:text-white border border-zinc-800 bg-black/50 px-2 py-1 rounded">
                 <Lock size={12} /> ADMIN LOGIN
@@ -423,7 +418,10 @@ export default function Home() {
             <div className="flex items-center gap-2 bg-black/40 px-3 py-1 rounded border border-white/5">
               <MoveHorizontal size={14} className="text-zinc-500" /><input type="range" min="800" max="5000" value={canvasWidth} onChange={(e) => setCanvasWidth(Number(e.target.value))} className="w-32 accent-amber-400 cursor-pointer h-1" /><ZoomIn size={14} className="text-zinc-500" />
             </div>
-            <button onClick={handleExport} className="flex items-center gap-2 px-4 py-2 border border-amber-400 text-amber-400 font-bold text-xs uppercase hover:bg-amber-400 hover:text-black transition-colors rounded-sm"><Download size={14} /> EXPORT</button>
+            {/* ▼▼▼ EXPORTボタン (許可証がある時のみ表示) ▼▼▼ */}
+            {enableAdminFeatures && (
+               <button onClick={handleExport} className="flex items-center gap-2 px-4 py-2 border border-amber-400 text-amber-400 font-bold text-xs uppercase hover:bg-amber-400 hover:text-black transition-colors rounded-sm"><Download size={14} /> EXPORT</button>
+            )}
           </div>
         </header>
 
@@ -450,6 +448,14 @@ export default function Home() {
                 <div className="sticky left-0 z-30 bg-[#09090b]/95 backdrop-blur-sm pr-4">
                   <h2 className="text-4xl font-black text-white tracking-tighter uppercase italic">Event Schedule</h2>
                   <div className="flex items-center gap-2 mt-1"><span className="bg-amber-400 text-black text-[10px] font-bold px-1">OFFICIAL_DATA</span><p className="text-xs text-amber-400 font-mono tracking-widest">ARKNIGHTS: ENDFIELD</p></div>
+                  
+                  {/* ▼▼▼ 注意事項を追加 ▼▼▼ */}
+                  <p className="text-[10px] text-zinc-500 mt-2 font-mono flex items-center gap-1">
+                    <Info size={10} />
+                    ※開催期間は予告なく変更される場合があります。終了時期が未定のイベントは仮の日付で表示されています。
+                  </p>
+                  {/* ▲▲▲ 追加ここまで ▲▲▲ */}
+
                 </div>
                 <div className="text-right"><div className="text-5xl font-bold text-zinc-800 font-mono select-none">{year}</div></div>
                 <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-amber-400 z-40"></div><div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-amber-400 z-40"></div>
