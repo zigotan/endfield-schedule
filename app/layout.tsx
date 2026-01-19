@@ -6,6 +6,13 @@ const inter = Inter({ subsets: ["latin"] });
 
 // ★ここがOGP設定です！
 export const metadata: Metadata = {
+  // ★追加: サイトのベースURLを定義します
+  metadataBase: new URL("https://endfield-schedule.vercel.app"), 
+
+  title: "Arknights: Endfield Schedule",
+  description: "Unofficial event schedule manager for Arknights: Endfield. Track events, gachas, and campaigns.",
+  openGraph: {
+    // ...（以下はそのまま）
   title: "Arknights: Endfield Schedule",
   description: "Unofficial event schedule manager for Arknights: Endfield. Track events, gachas, and campaigns.",
   openGraph: {
