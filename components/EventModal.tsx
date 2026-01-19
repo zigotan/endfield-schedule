@@ -1,6 +1,6 @@
 // src/components/EventModal.tsx
 import React from 'react';
-import { X, Calendar, Clock, AlignLeft, Youtube, ExternalLink } from 'lucide-react';
+import { X, Calendar, Clock, AlignLeft, ExternalLink } from 'lucide-react';
 import { format, parseISO, addDays } from 'date-fns';
 import { GameEvent, EventType } from '../types';
 
@@ -13,9 +13,9 @@ interface EventModalProps {
 export const EventModal: React.FC<EventModalProps> = ({ event, onClose, nextUpdateDate }) => {
   if (!event) return null;
 
-  // チャンネル情報
   const CHANNEL_NAME = "じごちゃんねる【エンドフィールド支部】";
-  const CHANNEL_URL = "https://www.youtube.com/channel/UCTv10NGVzs91keuRNy4z9Fg?sub_confirmation=1"; // 登録確認ポップアップ付きURL
+  const CHANNEL_URL = "https://www.youtube.com/channel/UCTv10NGVzs91keuRNy4z9Fg?sub_confirmation=1";
+  const CHANNEL_ICON_URL = "/icon.png"; 
 
   const generateGoogleCalendarUrl = () => {
     const start = format(parseISO(event.startDate), 'yyyyMMdd');
@@ -101,7 +101,7 @@ export const EventModal: React.FC<EventModalProps> = ({ event, onClose, nextUpda
               <span>Add to Google Calendar</span>
             </a>
 
-            {/* ★チャンネル登録促進バナー */}
+            {/* チャンネル登録促進バナー */}
             <a 
               href={CHANNEL_URL} 
               target="_blank" 
@@ -109,13 +109,13 @@ export const EventModal: React.FC<EventModalProps> = ({ event, onClose, nextUpda
               className="block bg-zinc-900 border border-zinc-800 hover:border-red-600 rounded-lg p-3 transition-all group relative overflow-hidden"
             >
               <div className="flex items-center gap-4 relative z-10">
-                 <div className="w-12 h-12 bg-red-600 rounded-full flex items-center justify-center flex-shrink-0 shadow-lg group-hover:scale-110 transition-transform">
-                    <Youtube size={24} fill="white" className="text-white" />
+                 <div className="w-12 h-12 rounded-full overflow-hidden border border-zinc-600 flex-shrink-0 shadow-lg group-hover:scale-110 transition-transform bg-black">
+                    <img src={CHANNEL_ICON_URL} alt="Channel Icon" className="w-full h-full object-cover" />
                  </div>
-                 <div className="flex-1">
+                 <div className="flex-1 min-w-0">
                     <div className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider mb-0.5">Official Channel</div>
-                    <div className="text-sm font-bold text-white group-hover:text-red-400 transition-colors">{CHANNEL_NAME}</div>
-                    <div className="text-[10px] text-zinc-500">エンドフィールドの最新攻略情報を配信中！</div>
+                    <div className="text-sm font-bold text-white group-hover:text-red-400 transition-colors truncate">{CHANNEL_NAME}</div>
+                    <div className="text-[10px] text-zinc-500 truncate">エンドフィールドの最新攻略情報を配信中！</div>
                  </div>
                  <div className="bg-white text-black text-[10px] font-bold px-3 py-1.5 rounded-full flex items-center gap-1 group-hover:bg-red-600 group-hover:text-white transition-colors">
                     SUBSCRIBE <ExternalLink size={10} />

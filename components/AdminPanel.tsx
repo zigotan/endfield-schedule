@@ -1,7 +1,14 @@
 // src/components/AdminPanel.tsx
-import React, { useRef } from 'react';
-import { Monitor, ImageIcon, FileDown, FileJson, AlignLeft } from 'lucide-react';
+import React, { useRef, useState } from 'react';
+import { Monitor, ImageIcon, FileDown, FileJson, AlignLeft, Loader2 } from 'lucide-react';
 import { EventType } from '../types';
+import { createClient } from '@supabase/supabase-js';
+
+// Supabaseクライアントの作成
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 interface AdminPanelProps {
   isAdmin: boolean;
@@ -14,12 +21,12 @@ interface AdminPanelProps {
   setInputStart: (v: string) => void;
   inputEnd: string;
   setInputEnd: (v: string) => void;
-  inputDesc: string; // ★ここが重要
-  setInputDesc: (v: string) => void; // ★ここが重要
+  inputDesc: string;
+  setInputDesc: (v: string) => void;
   inputType: EventType;
   setInputType: (v: EventType) => void;
   inputImage: string | null;
-  handleImageUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  setInputImage: (v: string | null) => void; // 画像URLをセットする関数を受け取る
   handleSaveEntry: () => void;
   isSyncing: boolean;
   handleJsonExport: () => void;
@@ -33,14 +40,50 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   inputTitle, setInputTitle,
   inputStart, setInputStart,
   inputEnd, setInputEnd,
-  inputDesc, setInputDesc, // ★ここも受け取る必要があります
+  inputDesc, setInputDesc,
   inputType, setInputType,
-  inputImage, handleImageUpload,
+  inputImage, setInputImage,
   handleSaveEntry, isSyncing,
   handleJsonExport, handleJsonImport,
   handleDeleteEvent
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploading, setIsUploading] = useState(false);
+
+  // 画像アップロード処理 (Supabase Storage)
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    try {
+      // ファイル名をユニークにする (タイムスタンプ + ランダム文字列)
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+      const filePath = `${fileName}`;
+
+      // 1. Storageにアップロード (バケット名 'images' を指定)
+      const { error: uploadError } = await supabase.storage
+        .from('images') 
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      // 2. 公開URLを取得
+      const { data } = supabase.storage
+        .from('images')
+        .getPublicUrl(filePath);
+
+      // 3. URLをステートにセット
+      setInputImage(data.publicUrl);
+      
+    } catch (error) {
+      console.error('Upload Error:', error);
+      alert('画像のアップロードに失敗しました。SupabaseのBucket設定(Public)を確認してください。');
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   if (!isAdmin) return null;
 
@@ -76,7 +119,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           </select>
         </div>
 
-        {/* ★この部分が表示されているはずです */}
         <div className="space-y-1">
           <label className="text-xs text-zinc-500 flex items-center gap-1"><AlignLeft size={10}/> Description</label>
           <textarea 
@@ -88,14 +130,29 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         </div>
 
         <div className="space-y-1">
-          <label className="text-xs text-zinc-500">Image</label>
-          <button onClick={() => fileInputRef.current?.click()} className="w-full bg-zinc-800 border border-zinc-700 p-2 text-xs text-zinc-300 rounded-sm flex justify-center gap-2"><ImageIcon size={14}/> {inputImage ? 'Change Image' : 'Select Image'}</button>
-          <input type="file" ref={fileInputRef} onChange={handleImageUpload} className="hidden" />
-          {inputImage && <div className="mt-2 rounded overflow-hidden border border-zinc-700"><img src={inputImage} alt="Preview" className="w-full h-auto opacity-50"/></div>}
+          <label className="text-xs text-zinc-500">Image (Supabase Storage)</label>
+          <button 
+            onClick={() => fileInputRef.current?.click()} 
+            disabled={isUploading}
+            className="w-full bg-zinc-800 border border-zinc-700 p-2 text-xs text-zinc-300 rounded-sm flex justify-center gap-2 hover:bg-zinc-700 transition-colors disabled:opacity-50"
+          >
+            {isUploading ? <Loader2 size={14} className="animate-spin" /> : <ImageIcon size={14}/>} 
+            {isUploading ? 'UPLOADING...' : (inputImage ? 'Change Image' : 'Select Image')}
+          </button>
+          <input type="file" ref={fileInputRef} onChange={handleImageUpload} className="hidden" accept="image/*" />
+          
+          {inputImage && (
+            <div className="mt-2 rounded overflow-hidden border border-zinc-700 relative group">
+              <img src={inputImage} alt="Preview" className="w-full h-auto opacity-80"/>
+              <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-[8px] text-zinc-400 p-1 truncate px-2">
+                {inputImage}
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="flex gap-2 mt-4">
-          <button onClick={handleSaveEntry} disabled={isSyncing} className="flex-1 py-2 bg-amber-400 text-black font-bold text-sm uppercase hover:bg-white rounded-sm disabled:opacity-50 transition-colors">
+          <button onClick={handleSaveEntry} disabled={isSyncing || isUploading} className="flex-1 py-2 bg-amber-400 text-black font-bold text-sm uppercase hover:bg-white rounded-sm disabled:opacity-50 transition-colors">
             {isSyncing ? 'SYNC...' : (isEditing ? 'UPDATE' : 'ADD')}
           </button>
           {isEditing && (

@@ -2,7 +2,7 @@
 import React from 'react';
 import { 
   Download, ZoomIn, MoveHorizontal, ChevronLeft, ChevronRight, 
-  Clock, Lock, Youtube 
+  Clock, Lock
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { EventType } from '../types';
@@ -38,16 +38,16 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   isAdmin,
   setShowLoginModal,
 }) => {
-  const CHANNEL_URL = "https://www.youtube.com/@zigotan"; 
+  const CHANNEL_URL = "https://www.youtube.com/channel/UCTv10NGVzs91keuRNy4z9Fg"; 
+  const CHANNEL_ICON_URL = "/icon.png"; 
 
   return (
     <header className="flex-none min-h-14 border-b border-zinc-800 flex flex-col md:flex-row items-center justify-between px-4 md:px-6 py-2 md:py-0 bg-[#18181b]/80 backdrop-blur-md z-50 relative gap-2 md:gap-0">
       
       {/* 上段 */}
       <div className="flex items-center justify-between w-full md:w-auto gap-2">
-        {/* 常設YouTubeリンク */}
-        <a href={CHANNEL_URL} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center w-8 h-8 bg-[#FF0000] text-white rounded hover:bg-[#CC0000] transition-colors shadow-lg" title="Official Channel">
-           <Youtube size={18} fill="white" />
+        <a href={CHANNEL_URL} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center w-8 h-8 rounded-full overflow-hidden border border-zinc-700 hover:border-amber-400 transition-colors shadow-lg group relative bg-black" title="じごちゃんねる【エンドフィールド支部】">
+           <img src={CHANNEL_ICON_URL} alt="Channel Icon" className="w-full h-full object-cover" />
         </a>
 
         {enableAdminFeatures && !isAdmin && (

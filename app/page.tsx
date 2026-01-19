@@ -152,7 +152,6 @@ export default function Home() {
   const [inputStart, setInputStart] = useState('2026-01-22');
   const [inputEnd, setInputEnd] = useState('2026-02-10');
   const [inputDesc, setInputDesc] = useState('');
-  // inputVideo は削除しました
   const [inputType, setInputType] = useState<EventType>('event');
   const [inputImage, setInputImage] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -258,12 +257,7 @@ export default function Home() {
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => setInputImage(reader.result as string);
-      reader.readAsDataURL(file);
-    }
+    // page.tsxのこの関数は使われなくなります
   };
 
   // クリック時の挙動分岐
@@ -339,6 +333,7 @@ export default function Home() {
             inputType={inputType}
             setInputType={setInputType}
             inputImage={inputImage}
+            setInputImage={setInputImage} // ★修正: 関数を渡す
             handleImageUpload={handleImageUpload}
             handleSaveEntry={handleSaveEntry}
             isSyncing={isSyncing}
