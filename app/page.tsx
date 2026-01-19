@@ -46,6 +46,9 @@ export default function Home() {
   const [weeks, setWeeks] = useState<WeekMarker[]>([]);
   const [lastUpdated, setLastUpdated] = useState<string>('');
 
+  // ▼▼▼ 管理者機能の有効化判定 (環境変数をチェック) ▼▼▼
+  const enableAdminFeatures = process.env.NEXT_PUBLIC_ENABLE_ADMIN === 'true';
+
   // 管理者モード
   const [isAdmin, setIsAdmin] = useState(false);
   const [passwordInput, setPasswordInput] = useState('');
@@ -191,7 +194,7 @@ export default function Home() {
     }
   };
 
-  // ★復元: ドラッグ＆ドロップ関連
+  // ドラッグ＆ドロップ関連
   const handleDragStart = (position: number) => { dragItem.current = position; };
   const handleDragEnter = (position: number) => { dragOverItem.current = position; };
   const handleDragEnd = () => {
@@ -207,7 +210,7 @@ export default function Home() {
     dragOverItem.current = null;
   };
 
-  // ★復元: 計算ロジック (これが無いとエラーになります)
+  // 計算ロジック
   const getPosition = (dateStr: string) => {
     const date = parseISO(dateStr);
     const diff = differenceInDays(date, currentPeriodStart);
@@ -225,7 +228,6 @@ export default function Home() {
   const handlePrevMonth = () => setViewStartMonth(prev => prev - 1);
   const handleNextMonth = () => setViewStartMonth(prev => prev + 1);
   
-  // ★復元: Todayジャンプ
   const handleJumpToToday = () => {
     if (todayPercent === null) {
       const now = new Date();
@@ -272,6 +274,40 @@ export default function Home() {
     setInputImage(event.bannerImage || null);
   };
 
+  // JSON バックアップ機能
+  const handleJsonExport = () => {
+    const dataStr = JSON.stringify(events, null, 2);
+    const blob = new Blob([dataStr], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `endfield_backup_${format(new Date(), 'yyyyMMdd')}.json`;
+    link.click();
+  };
+
+  const handleJsonImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const json = JSON.parse(event.target?.result as string);
+        if (Array.isArray(json)) {
+          if(confirm('現在のデータを上書きして読み込みますか？\n(注意: 現在の画面のデータは消えます)')) {
+             handleEditSave(json); // State更新とクラウド同期を同時に実行
+             alert('読み込み成功！データが更新されました。');
+          }
+        } else {
+          alert('ファイル形式が正しくありません (配列ではありません)');
+        }
+      } catch (err) {
+        alert('読み込みに失敗しました');
+      }
+    };
+    reader.readAsText(file);
+  };
+
   const getTypeColor = (type: EventType) => {
     switch(type) {
       case 'main': return 'bg-white text-black';
@@ -300,8 +336,8 @@ export default function Home() {
   return (
     <div className="flex h-screen w-full bg-[#09090b] text-zinc-200 font-sans selection:bg-amber-400 selection:text-black overflow-hidden">
       
-      {/* --- 左パネル (管理者のみ表示) --- */}
-      {isAdmin && (
+      {/* --- 左パネル (管理者かつ許可されている時のみ表示) --- */}
+      {isAdmin && enableAdminFeatures && (
         <aside className="w-80 flex flex-col border-r border-zinc-800 bg-[#18181b] z-20 shadow-xl flex-shrink-0">
           <div className="p-5 border-b border-zinc-800 flex justify-between items-center">
             <h1 className="text-xl font-bold tracking-wider text-amber-400 uppercase flex items-center gap-2">
@@ -332,6 +368,21 @@ export default function Home() {
             <button onClick={handleSaveEntry} disabled={isSyncing} className="w-full py-2 mt-4 bg-amber-400 text-black font-bold text-sm uppercase hover:bg-white rounded-sm disabled:opacity-50">
               {isSyncing ? 'SYNCING...' : (isEditing ? 'UPDATE' : 'ADD DATA')}
             </button>
+
+            {/* バックアップ・リストア ボタン */}
+            <div className="pt-4 border-t border-zinc-800 mt-4">
+              <h2 className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-2">BACKUP / RESTORE</h2>
+              <div className="grid grid-cols-2 gap-2">
+                 <button onClick={handleJsonExport} className="flex items-center justify-center gap-1 bg-zinc-800 border border-zinc-700 p-2 text-[10px] text-zinc-300 rounded-sm hover:bg-zinc-700 hover:text-white transition-colors">
+                    <FileDown size={14}/> SAVE FILE
+                 </button>
+                 <label className="flex items-center justify-center gap-1 bg-zinc-800 border border-zinc-700 p-2 text-[10px] text-zinc-300 rounded-sm hover:bg-zinc-700 hover:text-white transition-colors cursor-pointer">
+                    <FileJson size={14}/> LOAD FILE
+                    <input type="file" onChange={handleJsonImport} className="hidden" accept=".json"/>
+                 </label>
+              </div>
+            </div>
+
           </div>
         </aside>
       )}
@@ -343,11 +394,13 @@ export default function Home() {
         {/* ツールバー */}
         <header className="flex-none h-14 border-b border-zinc-800 flex items-center justify-between px-6 bg-[#18181b]/80 backdrop-blur-md z-50 relative">
           <div className="flex items-center gap-2">
-            {!isAdmin && (
+            {/* ▼▼▼ 管理者ボタン (許可証があり、未ログイン時のみ表示) ▼▼▼ */}
+            {enableAdminFeatures && !isAdmin && (
               <button onClick={() => setShowLoginModal(true)} className="mr-4 flex items-center gap-1 text-[10px] text-zinc-500 hover:text-white border border-zinc-800 bg-black/50 px-2 py-1 rounded">
                 <Lock size={12} /> ADMIN LOGIN
               </button>
             )}
+
             <div className="flex items-center bg-black/40 rounded border border-white/5 p-1 mr-2">
               <button onClick={handlePrevMonth} className="p-1 hover:text-amber-400 text-zinc-400"><ChevronLeft size={16} /></button>
               <span className="px-3 text-xs font-mono text-white font-bold min-w-[140px] text-center">{format(currentPeriodStart, 'yyyy/MM')} - {format(currentPeriodEnd, 'yyyy/MM')}</span>
@@ -422,10 +475,10 @@ export default function Home() {
                   const safePadding = Math.min(hiddenLeftPixels, Math.max(0, barTotalWidthPx - 100));
 
                   return (
-                    <div key={event.id} className="relative group" draggable={isAdmin && filterType === 'all'} onDragStart={() => handleDragStart(index)} onDragEnter={() => handleDragEnter(index)} onDragEnd={handleDragEnd} onDragOver={(e) => e.preventDefault()} style={{ left: `${leftPosPercent}%`, width: `${widthPercent}%`, position: 'relative', cursor: (isAdmin && filterType === 'all') ? 'grab' : 'default' }}>
+                    <div key={event.id} className="relative group" draggable={isAdmin && enableAdminFeatures && filterType === 'all'} onDragStart={() => handleDragStart(index)} onDragEnter={() => handleDragEnter(index)} onDragEnd={handleDragEnd} onDragOver={(e) => e.preventDefault()} style={{ left: `${leftPosPercent}%`, width: `${widthPercent}%`, position: 'relative', cursor: (isAdmin && enableAdminFeatures && filterType === 'all') ? 'grab' : 'default' }}>
                        <div className="w-full relative">
                           <div className="flex items-center gap-2 mb-1" style={{ paddingLeft: `${safePadding}px`, transition: 'padding-left 0.05s linear' }}>
-                             {(isAdmin && filterType === 'all') && <div className="text-zinc-600 hover:text-amber-400 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"><GripVertical size={16} /></div>}
+                             {(isAdmin && enableAdminFeatures && filterType === 'all') && <div className="text-zinc-600 hover:text-amber-400 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"><GripVertical size={16} /></div>}
                              <span className={`text-[10px] font-bold px-1.5 py-0.5 uppercase tracking-wider flex-shrink-0 ${getTypeColor(event.type)}`}>{event.type.toUpperCase()}</span>
                              <span className="text-sm font-bold text-zinc-200 drop-shadow-md shadow-black whitespace-nowrap cursor-pointer hover:underline flex-shrink-0" onClick={() => handleEdit(event)}>{event.title}</span>
                              <span className="text-[10px] text-zinc-500 font-mono whitespace-nowrap ml-1 opacity-70 flex-shrink-0">{format(parseISO(event.startDate), 'MM/dd')} - {format(parseISO(event.endDate), 'MM/dd')}</span>
