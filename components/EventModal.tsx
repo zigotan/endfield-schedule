@@ -13,6 +13,8 @@ interface EventModalProps {
 export const EventModal: React.FC<EventModalProps> = ({ event, onClose, nextUpdateDate }) => {
   if (!event) return null;
 
+  // ★ここを「SITE ADMIN」に変更しました
+  const CHANNEL_LABEL = "SITE ADMIN"; 
   const CHANNEL_NAME = "じごちゃんねる【エンドフィールド支部】";
   const CHANNEL_URL = "https://www.youtube.com/channel/UCTv10NGVzs91keuRNy4z9Fg?sub_confirmation=1";
   const CHANNEL_ICON_URL = "/icon.png"; 
@@ -113,7 +115,8 @@ export const EventModal: React.FC<EventModalProps> = ({ event, onClose, nextUpda
                     <img src={CHANNEL_ICON_URL} alt="Channel Icon" className="w-full h-full object-cover" />
                  </div>
                  <div className="flex-1 min-w-0">
-                    <div className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider mb-0.5">Official Channel</div>
+                    {/* ここでCHANNEL_LABELを使用 */}
+                    <div className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider mb-0.5">{CHANNEL_LABEL}</div>
                     <div className="text-sm font-bold text-white group-hover:text-red-400 transition-colors truncate">{CHANNEL_NAME}</div>
                     <div className="text-[10px] text-zinc-500 truncate">エンドフィールドの最新攻略情報を配信中！</div>
                  </div>
