@@ -13,7 +13,6 @@ interface EventModalProps {
 export const EventModal: React.FC<EventModalProps> = ({ event, onClose, nextUpdateDate }) => {
   if (!event) return null;
 
-  // ★ここを「SITE ADMIN」に変更しました
   const CHANNEL_LABEL = "SITE ADMIN"; 
   const CHANNEL_NAME = "じごちゃんねる【エンドフィールド支部】";
   const CHANNEL_URL = "https://www.youtube.com/channel/UCTv10NGVzs91keuRNy4z9Fg?sub_confirmation=1";
@@ -50,13 +49,15 @@ export const EventModal: React.FC<EventModalProps> = ({ event, onClose, nextUpda
 
   return (
     <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200" onClick={onClose}>
-      <div className="bg-[#18181b] w-full max-w-lg rounded-lg border border-zinc-700 shadow-2xl overflow-hidden relative" onClick={e => e.stopPropagation()}>
+      {/* ★修正: max-h-[85vh] と flex flex-col を追加して、画面からはみ出さないように制限 */}
+      <div className="bg-[#18181b] w-full max-w-lg max-h-[85vh] flex flex-col rounded-lg border border-zinc-700 shadow-2xl overflow-hidden relative" onClick={e => e.stopPropagation()}>
         
         <button onClick={onClose} className="absolute top-4 right-4 z-10 bg-black/50 p-2 rounded-full text-white hover:bg-white hover:text-black transition-colors">
           <X size={20} />
         </button>
 
-        <div className="relative w-full aspect-video bg-zinc-950 flex items-center justify-center overflow-hidden">
+        {/* ★修正: flex-shrink-0 を追加して、スクロール時も画像が潰れないようにする */}
+        <div className="relative w-full aspect-video bg-zinc-950 flex items-center justify-center overflow-hidden flex-shrink-0">
           {event.bannerImage ? (
             <img src={event.bannerImage} alt={event.title} className="w-full h-full object-contain" />
           ) : (
@@ -70,7 +71,8 @@ export const EventModal: React.FC<EventModalProps> = ({ event, onClose, nextUpda
           </div>
         </div>
 
-        <div className="p-6 space-y-6">
+        {/* ★修正: overflow-y-auto をここに追加。画像より下の部分だけスクロールさせる */}
+        <div className="p-6 space-y-6 overflow-y-auto custom-scrollbar">
           <div>
             <h2 className="text-2xl font-bold text-white leading-tight mb-2">{event.title}</h2>
             <div className="flex items-center gap-2 text-zinc-400 font-mono text-sm">
@@ -82,7 +84,8 @@ export const EventModal: React.FC<EventModalProps> = ({ event, onClose, nextUpda
           </div>
 
           {event.description && (
-            <div className="bg-zinc-900/50 p-4 rounded border border-zinc-800 max-h-60 overflow-y-auto custom-scrollbar">
+            // ★修正: 説明文自体のスクロール(max-h-60)は削除し、親のスクロールに任せる形に変更
+            <div className="bg-zinc-900/50 p-4 rounded border border-zinc-800">
               <div className="flex items-center gap-2 text-zinc-500 text-xs font-bold mb-2 uppercase sticky top-0 bg-[#18181b]/0">
                 <AlignLeft size={14} /> Details
               </div>
@@ -92,7 +95,7 @@ export const EventModal: React.FC<EventModalProps> = ({ event, onClose, nextUpda
             </div>
           )}
 
-          <div className="space-y-4">
+          <div className="space-y-4 pb-2"> {/* 下部に少し余白を追加 */}
             <a 
               href={generateGoogleCalendarUrl()} 
               target="_blank" 
@@ -115,7 +118,6 @@ export const EventModal: React.FC<EventModalProps> = ({ event, onClose, nextUpda
                     <img src={CHANNEL_ICON_URL} alt="Channel Icon" className="w-full h-full object-cover" />
                  </div>
                  <div className="flex-1 min-w-0">
-                    {/* ここでCHANNEL_LABELを使用 */}
                     <div className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider mb-0.5">{CHANNEL_LABEL}</div>
                     <div className="text-sm font-bold text-white group-hover:text-red-400 transition-colors truncate">{CHANNEL_NAME}</div>
                     <div className="text-[10px] text-zinc-500 truncate">エンドフィールドの最新攻略情報を配信中！</div>
