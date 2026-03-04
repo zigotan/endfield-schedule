@@ -1,14 +1,7 @@
 // src/components/AdminPanel.tsx
-import React, { useRef, useState } from 'react';
-import { Monitor, ImageIcon, FileDown, FileJson, AlignLeft, Loader2 } from 'lucide-react';
+import React from 'react';
+import { Monitor, ImageIcon, FileDown, FileJson, AlignLeft } from 'lucide-react';
 import { EventType } from '../types';
-import { createClient } from '@supabase/supabase-js';
-
-// Supabaseクライアントの作成
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
 
 interface AdminPanelProps {
   isAdmin: boolean;
@@ -26,7 +19,7 @@ interface AdminPanelProps {
   inputType: EventType;
   setInputType: (v: EventType) => void;
   inputImage: string | null;
-  setInputImage: (v: string | null) => void; // 画像URLをセットする関数を受け取る
+  setInputImage: (v: string | null) => void;
   handleSaveEntry: () => void;
   isSyncing: boolean;
   handleJsonExport: () => void;
@@ -47,43 +40,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   handleJsonExport, handleJsonImport,
   handleDeleteEvent
 }) => {
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [isUploading, setIsUploading] = useState(false);
-
-  // 画像アップロード処理 (Supabase Storage)
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setIsUploading(true);
-    try {
-      // ファイル名をユニークにする (タイムスタンプ + ランダム文字列)
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
-      const filePath = `${fileName}`;
-
-      // 1. Storageにアップロード (バケット名 'images' を指定)
-      const { error: uploadError } = await supabase.storage
-        .from('images') 
-        .upload(filePath, file);
-
-      if (uploadError) throw uploadError;
-
-      // 2. 公開URLを取得
-      const { data } = supabase.storage
-        .from('images')
-        .getPublicUrl(filePath);
-
-      // 3. URLをステートにセット
-      setInputImage(data.publicUrl);
-      
-    } catch (error) {
-      console.error('Upload Error:', error);
-      alert('画像のアップロードに失敗しました。SupabaseのBucket設定(Public)を確認してください。');
-    } finally {
-      setIsUploading(false);
-    }
-  };
 
   if (!isAdmin) return null;
 
@@ -129,30 +85,34 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           />
         </div>
 
+        {/* ★修正: ファイルアップロードを廃止し、URL/パスの手入力に変更 */}
         <div className="space-y-1">
-          <label className="text-xs text-zinc-500">Image (Supabase Storage)</label>
-          <button 
-            onClick={() => fileInputRef.current?.click()} 
-            disabled={isUploading}
-            className="w-full bg-zinc-800 border border-zinc-700 p-2 text-xs text-zinc-300 rounded-sm flex justify-center gap-2 hover:bg-zinc-700 transition-colors disabled:opacity-50"
-          >
-            {isUploading ? <Loader2 size={14} className="animate-spin" /> : <ImageIcon size={14}/>} 
-            {isUploading ? 'UPLOADING...' : (inputImage ? 'Change Image' : 'Select Image')}
-          </button>
-          <input type="file" ref={fileInputRef} onChange={handleImageUpload} className="hidden" accept="image/*" />
+          <label className="text-xs text-zinc-500 flex items-center gap-1"><ImageIcon size={10}/> Image Path / URL</label>
+          <input 
+            type="text" 
+            value={inputImage || ''} 
+            onChange={(e) => setInputImage(e.target.value)} 
+            className="w-full bg-black border border-zinc-700 p-2 text-sm text-white focus:border-amber-400 outline-none rounded-sm" 
+            placeholder="例: /images/event_01.jpg または https://..." 
+          />
+          <p className="text-[10px] text-zinc-500 mt-1">※publicフォルダ内の画像パス、または外部URLを入力</p>
           
           {inputImage && (
-            <div className="mt-2 rounded overflow-hidden border border-zinc-700 relative group">
-              <img src={inputImage} alt="Preview" className="w-full h-auto opacity-80"/>
-              <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-[8px] text-zinc-400 p-1 truncate px-2">
-                {inputImage}
-              </div>
+            <div className="mt-2 rounded overflow-hidden border border-zinc-700 relative group bg-zinc-950 min-h-16 flex items-center justify-center">
+              <img 
+                src={inputImage} 
+                alt="Preview" 
+                className="w-full h-auto opacity-80"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).style.display = 'none';
+                }}
+              />
             </div>
           )}
         </div>
 
         <div className="flex gap-2 mt-4">
-          <button onClick={handleSaveEntry} disabled={isSyncing || isUploading} className="flex-1 py-2 bg-amber-400 text-black font-bold text-sm uppercase hover:bg-white rounded-sm disabled:opacity-50 transition-colors">
+          <button onClick={handleSaveEntry} disabled={isSyncing} className="flex-1 py-2 bg-amber-400 text-black font-bold text-sm uppercase hover:bg-white rounded-sm disabled:opacity-50 transition-colors">
             {isSyncing ? 'SYNC...' : (isEditing ? 'UPDATE' : 'ADD')}
           </button>
           {isEditing && (

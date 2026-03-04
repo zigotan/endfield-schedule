@@ -330,7 +330,6 @@ export default function Home() {
             setInputType={setInputType}
             inputImage={inputImage}
             setInputImage={setInputImage} 
-            // ★ handleImageUpload={handleImageUpload} を削除しました
             handleSaveEntry={handleSaveEntry}
             isSyncing={isSyncing}
             handleJsonExport={handleJsonExport}
