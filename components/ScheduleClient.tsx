@@ -22,13 +22,16 @@ export function ScheduleClient({ initialEvents }: ScheduleClientProps) {
     const [canvasWidth, setCanvasWidth] = useState(1600);
     const [filterType, setFilterType] = useState<EventType | 'all'>('all');
 
-    const [events, setEvents] = useState<GameEvent[]>(initialEvents);
+    const initialSysEvent = initialEvents.find(e => e.id === 'SYSTEM_NEXT_UPDATE');
+    const actualEvents = initialEvents.filter(e => e.id !== 'SYSTEM_NEXT_UPDATE');
+
+    const [events, setEvents] = useState<GameEvent[]>(actualEvents);
     const [todayPercent, setTodayPercent] = useState<number | null>(null);
     const [weeks, setWeeks] = useState<WeekMarker[]>([]);
     const [lastUpdated, setLastUpdated] = useState<string>('');
 
     // 次回バージョンアップ予定日
-    const [nextUpdateDate, setNextUpdateDate] = useState('2026-03-10');
+    const [nextUpdateDate, setNextUpdateDate] = useState(initialSysEvent ? initialSysEvent.startDate : '2026-03-10');
 
     // 管理者機能設定
     const enableAdminFeatures = process.env.NEXT_PUBLIC_ENABLE_ADMIN === 'true';
@@ -94,18 +97,21 @@ export function ScheduleClient({ initialEvents }: ScheduleClientProps) {
     }, [year, viewStartMonth, totalDaysInView, canvasWidth]);
 
     // --- クラウド同期 (API を /api/local-sync に変更) ---
-    const syncToCloud = async (newEvents: GameEvent[]) => {
+    const syncToCloud = async (newEvents: GameEvent[], action?: 'publish') => {
         if (!isAdmin) return;
         setIsSyncing(true);
         try {
             const res = await fetch('/api/local-sync', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ password: passwordInput, events: newEvents }),
+                body: JSON.stringify({ password: passwordInput, events: newEvents, action }),
             });
             if (!res.ok) throw new Error('Auth Failed');
             const nowStr = format(new Date(), 'yyyy/MM/dd HH:mm');
             setLastUpdated(nowStr);
+            if (action === 'publish') {
+                alert('Success: 保存およびGitHubへのプッシュが完了しました！');
+            }
         } catch (e) {
             alert('Sync Failed: Incorrect Password or Network/Environment Error');
             setIsAdmin(false);
@@ -121,9 +127,52 @@ export function ScheduleClient({ initialEvents }: ScheduleClientProps) {
         }
     };
 
-    const handleEditSave = (newEvents: GameEvent[]) => {
+    const handleEditSave = (newEvents: GameEvent[], action?: 'publish') => {
         setEvents(newEvents);
-        syncToCloud(newEvents);
+
+        // システム設定イベントを配列末尾に混入させて保存する
+        const sysEvent: GameEvent = {
+            id: 'SYSTEM_NEXT_UPDATE',
+            title: 'システム設定：次回アップデート日',
+            type: 'main',
+            startDate: nextUpdateDate,
+            endDate: nextUpdateDate,
+            description: 'UI上には表示されない設定用のデータです。',
+        };
+        syncToCloud([...newEvents, sysEvent], action);
+    };
+
+    const handleSaveConfig = () => {
+        handleEditSave(events);
+        if (!isSyncing) alert('設定を保存しました');
+    };
+
+    const handleImageUpload = async (file: File): Promise<string | null> => {
+        setIsSyncing(true);
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('password', passwordInput);
+
+        try {
+            const res = await fetch('/api/upload', {
+                method: 'POST',
+                body: formData
+            });
+            if (!res.ok) throw new Error('Upload Failed');
+            const data = await res.json();
+            return data.url;
+        } catch (e) {
+            alert('画像アップロードに失敗しました');
+            return null;
+        } finally {
+            setIsSyncing(false);
+        }
+    };
+
+    const handlePublishAll = () => {
+        if (confirm('ローカルの全イベントデータをGitHubへプッシュし、本番環境を更新します。\nよろしいですか？')) {
+            handleEditSave(events, 'publish');
+        }
     };
 
     // 編集フォーム状態
@@ -136,7 +185,7 @@ export function ScheduleClient({ initialEvents }: ScheduleClientProps) {
     const [isEditing, setIsEditing] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
 
-    const handleSaveEntry = () => {
+    const handleSaveEntryInternal = (action?: 'publish') => {
         if (!inputTitle || !inputStart || !inputEnd) return;
         const newEvent: GameEvent = {
             id: isEditing && editingId ? editingId : Date.now().toString(),
@@ -150,7 +199,7 @@ export function ScheduleClient({ initialEvents }: ScheduleClientProps) {
         const newEvents = isEditing && editingId
             ? events.map(e => e.id === editingId ? newEvent : e)
             : [...events, newEvent];
-        handleEditSave(newEvents);
+        handleEditSave(newEvents, action);
 
         // リセット
         setIsEditing(false);
@@ -159,6 +208,9 @@ export function ScheduleClient({ initialEvents }: ScheduleClientProps) {
         setInputDesc('');
         setInputImage(null);
     };
+
+    const handleSaveEntry = () => handleSaveEntryInternal();
+    const handlePublishEntry = () => handleSaveEntryInternal('publish');
 
     const handleDeleteEvent = () => {
         if (!editingId) return;
@@ -308,7 +360,13 @@ export function ScheduleClient({ initialEvents }: ScheduleClientProps) {
                     inputImage={inputImage}
                     setInputImage={setInputImage}
                     handleSaveEntry={handleSaveEntry}
+                    handlePublishEntry={handlePublishEntry}
+                    handlePublishAll={handlePublishAll}
+                    handleImageUpload={handleImageUpload}
                     isSyncing={isSyncing}
+                    nextUpdateDate={nextUpdateDate}
+                    setNextUpdateDate={setNextUpdateDate}
+                    handleSaveConfig={handleSaveConfig}
                     handleJsonExport={handleJsonExport}
                     handleJsonImport={handleJsonImport}
                     handleDeleteEvent={handleDeleteEvent}

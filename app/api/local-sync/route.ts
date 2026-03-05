@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs/promises';
 import path from 'path';
+import { exec } from 'child_process';
+import util from 'util';
+
+const execAsync = util.promisify(exec);
 
 export async function POST(req: NextRequest) {
     // セキュリティ: 開発環境以外からのアクセスはブロック
@@ -10,7 +14,7 @@ export async function POST(req: NextRequest) {
 
     try {
         const body = await req.json();
-        const { password, events } = body;
+        const { password, events, action } = body;
 
         // パスワードチェック (環境変数)
         if (password !== process.env.ADMIN_PASSWORD) {
@@ -24,6 +28,19 @@ export async function POST(req: NextRequest) {
         await fs.writeFile(dataPath, JSON.stringify(events, null, 2), 'utf8');
 
         console.log(`[local-sync] Successfully saved ${events.length} events to ${dataPath}`);
+
+        if (action === 'publish') {
+            console.log('[local-sync] Committing and pushing to GitHub...');
+            try {
+                const { stdout, stderr } = await execAsync('git add src/data/events.json public/images/ && git commit -m "Update schedule events via Admin UI" && git push');
+                console.log('[local-sync] Git Publish Output:', stdout);
+                if (stderr) console.error('[local-sync] Git Publish Stderr:', stderr);
+            } catch (gitErr: any) {
+                console.error('[local-sync] Git Push Error:', gitErr);
+                // コミットするものが無い・ネットワークエラーなどでgitコマンドが失敗してもデータは保存済とする
+                console.log('[local-sync] Continuing despite git push failure.');
+            }
+        }
 
         return NextResponse.json({ success: true });
     } catch (err) {
