@@ -286,5 +286,13 @@
     "type": "high_difficulty",
     "bannerImage": "/images/1772669342146_3juxc.png",
     "description": "ステージクリアで報酬を獲得"
+  },
+  {
+    "id": "SYSTEM_NEXT_UPDATE",
+    "title": "システム設定：次回アップデート日",
+    "type": "main",
+    "startDate": "2026-03-12",
+    "endDate": "2026-03-12",
+    "description": "UI上には表示されない設定用のデータです。"
   }
 ]
