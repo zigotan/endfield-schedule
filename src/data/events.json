@@ -302,7 +302,7 @@
     "startDate": "2026-04-17",
     "endDate": "2026-05-22",
     "type": "gacha",
-    "bannerImage": "/images/1776264230973_bu61zk.png",
+    "bannerImage": "/images/1776264247749_igasr.png",
     "description": "★6オペレーター「ソアン・ファンイ」ピックアップ"
   },
   {
@@ -311,6 +311,7 @@
     "startDate": "2026-05-14",
     "endDate": "2026-05-22",
     "type": "gacha",
+    "bannerImage": "/images/1776264256784_x4tvbf.png",
     "description": "★6オペレーター「レーヴァテイン」「ギルベルタ」「アルデリア」「ポグラニチニク」出現"
   },
   {
@@ -319,6 +320,7 @@
     "startDate": "2026-04-17",
     "endDate": "2026-05-22",
     "type": "gacha",
+    "bannerImage": "/images/1776264261531_bglf5r.png",
     "description": "★6武器「孤舟（アーツユニット）」ピックアップ"
   },
   {
@@ -327,6 +329,7 @@
     "startDate": "2026-04-17",
     "endDate": "2026-05-18",
     "type": "campaign",
+    "bannerImage": "/images/1776264282226_1kpk8p.png",
     "description": "毎日ログインで育成素材などを入手"
   },
   {
@@ -335,6 +338,7 @@
     "startDate": "2026-04-17",
     "endDate": "2026-05-22",
     "type": "campaign",
+    "bannerImage": "/images/1776264288261_kwq1bg.png",
     "description": "バージョン「春の暁、訪れし時」開始から常時開放"
   },
   {
@@ -343,6 +347,7 @@
     "startDate": "2026-04-17",
     "endDate": "2026-05-14",
     "type": "event",
+    "bannerImage": "/images/1776264310645_xrxwie.png",
     "description": "指定の任務を完了して報酬を入手"
   },
   {
@@ -351,6 +356,7 @@
     "startDate": "2026-04-24",
     "endDate": "2026-05-22",
     "type": "event",
+    "bannerImage": "/images/1776264315685_lgf8n.png",
     "description": "「名を刻もう・記念撮影」「名を刻もうスタンプ」\nスタンプラリーなどに参加して報酬を入手"
   },
   {
@@ -359,6 +365,7 @@
     "startDate": "2026-04-28",
     "endDate": "2026-05-13",
     "type": "event",
+    "bannerImage": "/images/1776264320813_tao0mn.png",
     "description": "指定の任務完了で支援物資のレシピと交換所が解放（交換所は5/19 04:00まで）"
   },
   {
@@ -367,6 +374,7 @@
     "startDate": "2026-05-07",
     "endDate": "2026-05-14",
     "type": "campaign",
+    "bannerImage": "/images/1776264328475_zyghqr.png",
     "description": "毎日指定の任務完了で理性補給の報酬を入手"
   },
   {
@@ -375,6 +383,7 @@
     "startDate": "2026-05-14",
     "endDate": "2026-05-22",
     "type": "event",
+    "bannerImage": "/images/1776264389558_liw6a.png",
     "description": "物資配給任務を完了して報酬を入手"
   },
   {
@@ -383,6 +392,7 @@
     "startDate": "2026-05-14",
     "endDate": "2026-05-22",
     "type": "event",
+    "bannerImage": "/images/1776264394765_i1eyv.png",
     "description": "指定の任務を完了して報酬を入手"
   },
   {
@@ -391,6 +401,7 @@
     "startDate": "2026-05-08",
     "endDate": "2026-05-22",
     "type": "high_difficulty",
+    "bannerImage": "/images/1776264398690_aqqy9u5.png",
     "description": "「映像の記念碑」の対応ステージをクリアで報酬入手"
   },
   {
@@ -399,6 +410,7 @@
     "startDate": "2026-04-17",
     "endDate": "2026-05-22",
     "type": "campaign",
+    "bannerImage": "/images/1776264407444_mhe3pc.png",
     "description": "バトルパスの更新。協約通行証で各種報酬を獲得"
   },
   {
@@ -407,6 +419,7 @@
     "startDate": "2026-05-29",
     "endDate": "2026-06-05",
     "type": "campaign",
+    "bannerImage": "/images/1776264412547_c5ead.png",
     "description": "毎日指定の任務完了で理性補給の報酬を入手\n※バージョン跨ぎ"
   },
   {
